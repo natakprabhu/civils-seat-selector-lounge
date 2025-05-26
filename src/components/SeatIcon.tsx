@@ -32,19 +32,15 @@ const SeatIcon: React.FC<SeatIconProps> = ({ seatNumber, status, onClick, disabl
     
     switch (rowLetter) {
       case 'A':
+      case 'C':
+      case 'E':
         // Flipped shape - rounded bottom instead of top
         return 'rounded-b-lg rounded-t-sm';
       case 'B':
-      case 'C':
-        // Mirror seats - angled shape
-        return 'rounded-l-lg rounded-r-sm transform skew-y-1';
       case 'D':
-      case 'E':
-        // Mirror seats - opposite angled shape
-        return 'rounded-r-lg rounded-l-sm transform -skew-y-1';
       case 'F':
       default:
-        // Standard shape
+        // Standard shape - rounded top
         return 'rounded-t-lg rounded-b-sm';
     }
   };
