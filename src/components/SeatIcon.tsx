@@ -25,12 +25,37 @@ const SeatIcon: React.FC<SeatIconProps> = ({ seatNumber, status, onClick, disabl
     }
   };
 
+  const getRowLetter = () => seatNumber.charAt(0);
+  
+  const getSeatShape = () => {
+    const rowLetter = getRowLetter();
+    
+    switch (rowLetter) {
+      case 'A':
+        // Flipped shape - rounded bottom instead of top
+        return 'rounded-b-lg rounded-t-sm';
+      case 'B':
+      case 'C':
+        // Mirror seats - angled shape
+        return 'rounded-l-lg rounded-r-sm transform skew-y-1';
+      case 'D':
+      case 'E':
+        // Mirror seats - opposite angled shape
+        return 'rounded-r-lg rounded-l-sm transform -skew-y-1';
+      case 'F':
+      default:
+        // Standard shape
+        return 'rounded-t-lg rounded-b-sm';
+    }
+  };
+
   return (
     <div
       className={cn(
-        'w-14 h-14 rounded-t-lg rounded-b-sm relative flex items-center justify-center font-bold text-xs transition-all duration-200 cursor-pointer shadow-lg border-2 border-gray-300',
+        'w-14 h-14 relative flex items-center justify-center font-bold text-xs transition-all duration-200 cursor-pointer shadow-lg border-2 border-gray-300',
         'before:content-[""] before:absolute before:bottom-0 before:left-1 before:right-1 before:h-1 before:bg-gray-400 before:rounded-sm',
-        'after:content-[""] after:absolute after:top-2 after:left-1 after:right-1 after:h-8 after:rounded-t-lg after:border-2 after:border-gray-200',
+        'after:content-[""] after:absolute after:top-2 after:left-1 after:right-1 after:h-8 after:rounded-lg after:border-2 after:border-gray-200',
+        getSeatShape(),
         getStatusColor(),
         disabled && 'cursor-not-allowed opacity-50'
       )}
