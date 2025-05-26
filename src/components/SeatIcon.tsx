@@ -28,13 +28,22 @@ const SeatIcon: React.FC<SeatIconProps> = ({ seatNumber, status, onClick, disabl
   return (
     <div
       className={cn(
-        'w-12 h-12 rounded-lg flex items-center justify-center font-semibold text-sm transition-all duration-200 cursor-pointer shadow-md',
+        'w-14 h-14 rounded-t-lg rounded-b-sm relative flex items-center justify-center font-bold text-xs transition-all duration-200 cursor-pointer shadow-lg border-2 border-gray-300',
+        'before:content-[""] before:absolute before:bottom-0 before:left-1 before:right-1 before:h-1 before:bg-gray-400 before:rounded-sm',
+        'after:content-[""] after:absolute after:top-2 after:left-1 after:right-1 after:h-8 after:rounded-t-lg after:border-2 after:border-gray-200',
         getStatusColor(),
         disabled && 'cursor-not-allowed opacity-50'
       )}
       onClick={!disabled && status === 'vacant' ? onClick : undefined}
+      style={{
+        background: status === 'vacant' ? 'linear-gradient(135deg, #10b981, #059669)' :
+                   status === 'booked' ? 'linear-gradient(135deg, #ef4444, #dc2626)' :
+                   status === 'pending' ? 'linear-gradient(135deg, #f59e0b, #d97706)' :
+                   status === 'selected' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' :
+                   '#9ca3af'
+      }}
     >
-      {seatNumber}
+      <span className="relative z-10 drop-shadow-sm">{seatNumber}</span>
     </div>
   );
 };

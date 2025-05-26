@@ -17,18 +17,31 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [currentView, setCurrentView] = useState<'dashboard' | 'seat-selection' | 'booking-form' | 'success'>('dashboard');
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
 
-  // Mock data for seats
+  // Generate seats with row-based numbering
   const [seats] = useState(() => {
     const seatData = [];
-    for (let i = 1; i <= 48; i++) {
-      const statuses = ['vacant', 'booked', 'pending'] as const;
-      const randomStatus = statuses[Math.floor(Math.random() * 3)];
-      seatData.push({
-        id: i.toString(),
-        number: i.toString().padStart(2, '0'),
-        status: i <= 15 ? 'vacant' : randomStatus // Ensure some seats are vacant for demo
-      });
-    }
+    const rows = [
+      { letter: 'A', count: 12 },
+      { letter: 'B', count: 12 },
+      { letter: 'C', count: 12 },
+      { letter: 'D', count: 9 },
+      { letter: 'E', count: 7 },
+      { letter: 'F', count: 7 }
+    ];
+
+    let seatId = 1;
+    rows.forEach(row => {
+      for (let i = 1; i <= row.count; i++) {
+        const statuses = ['vacant', 'booked', 'pending'] as const;
+        const randomStatus = seatId <= 20 ? 'vacant' : statuses[Math.floor(Math.random() * 3)];
+        seatData.push({
+          id: seatId.toString(),
+          number: `${row.letter}${i}`,
+          status: randomStatus
+        });
+        seatId++;
+      }
+    });
     return seatData;
   });
 
@@ -192,24 +205,38 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </Card>
         </div>
 
-        {/* Real-time Seat Status */}
+        {/* Real-time Seat Status with Row Layout */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Real-time Seat Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-8 gap-2 mb-6">
-              {seats.map((seat) => (
-                <div
-                  key={seat.id}
-                  className={`
-                    w-12 h-12 rounded-lg flex items-center justify-center font-semibold text-sm
-                    ${seat.status === 'vacant' ? 'bg-green-500 text-white' : ''}
-                    ${seat.status === 'booked' ? 'bg-red-500 text-white' : ''}
-                    ${seat.status === 'pending' ? 'bg-yellow-500 text-white' : ''}
-                  `}
-                >
-                  {seat.number}
+            <div className="space-y-3 mb-6">
+              {[
+                { letter: 'A', count: 12, startIndex: 0 },
+                { letter: 'B', count: 12, startIndex: 12 },
+                { letter: 'C', count: 12, startIndex: 24 },
+                { letter: 'D', count: 9, startIndex: 36 },
+                { letter: 'E', count: 7, startIndex: 45 },
+                { letter: 'F', count: 7, startIndex: 52 }
+              ].map((row) => (
+                <div key={row.letter} className="flex items-center gap-2">
+                  <span className="font-bold text-blue-900 w-6">{row.letter}:</span>
+                  <div className="flex gap-1">
+                    {seats.slice(row.startIndex, row.startIndex + row.count).map((seat) => (
+                      <div
+                        key={seat.id}
+                        className={`
+                          w-10 h-10 rounded-lg flex items-center justify-center font-semibold text-xs
+                          ${seat.status === 'vacant' ? 'bg-green-500 text-white' : ''}
+                          ${seat.status === 'booked' ? 'bg-red-500 text-white' : ''}
+                          ${seat.status === 'pending' ? 'bg-yellow-500 text-white' : ''}
+                        `}
+                      >
+                        {seat.number}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

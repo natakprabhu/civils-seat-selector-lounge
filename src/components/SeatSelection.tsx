@@ -23,11 +23,15 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   onSeatSelect,
   onConfirmSelection
 }) => {
-  // Organize seats in a grid layout (6 rows x 8 columns for example)
-  const seatRows = [];
-  for (let i = 0; i < seats.length; i += 8) {
-    seatRows.push(seats.slice(i, i + 8));
-  }
+  // Organize seats by rows
+  const seatRows = [
+    { letter: 'A', count: 12, startIndex: 0 },
+    { letter: 'B', count: 12, startIndex: 12 },
+    { letter: 'C', count: 12, startIndex: 24 },
+    { letter: 'D', count: 9, startIndex: 36 },
+    { letter: 'E', count: 7, startIndex: 45 },
+    { letter: 'F', count: 7, startIndex: 52 }
+  ];
 
   return (
     <Card className="w-full">
@@ -55,18 +59,21 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3 mb-6">
-          {seatRows.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex justify-center gap-2">
-              {row.map((seat) => (
-                <SeatIcon
-                  key={seat.id}
-                  seatNumber={seat.number}
-                  status={selectedSeat === seat.id ? 'selected' : seat.status}
-                  onClick={() => onSeatSelect(seat.id)}
-                  disabled={seat.status !== 'vacant'}
-                />
-              ))}
+        <div className="space-y-4 mb-6">
+          {seatRows.map((row) => (
+            <div key={row.letter} className="flex items-center gap-3">
+              <span className="font-bold text-blue-900 text-lg w-8">{row.letter}:</span>
+              <div className="flex gap-2 flex-wrap">
+                {seats.slice(row.startIndex, row.startIndex + row.count).map((seat) => (
+                  <SeatIcon
+                    key={seat.id}
+                    seatNumber={seat.number}
+                    status={selectedSeat === seat.id ? 'selected' : seat.status}
+                    onClick={() => onSeatSelect(seat.id)}
+                    disabled={seat.status !== 'vacant'}
+                  />
+                ))}
+              </div>
             </div>
           ))}
         </div>
