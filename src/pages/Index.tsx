@@ -1,14 +1,37 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React, { useState } from 'react';
+import PreLoginPage from '@/components/PreLoginPage';
+import ClientDashboard from '@/components/ClientDashboard';
+import AdminDashboard from '@/components/AdminDashboard';
+import StaffDashboard from '@/components/StaffDashboard';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
+  const [user, setUser] = useState<{
+    mobile: string;
+    userType: 'client' | 'admin' | 'staff';
+  } | null>(null);
+
+  const handleLogin = (mobile: string, userType: 'client' | 'admin' | 'staff') => {
+    setUser({ mobile, userType });
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+  };
+
+  if (!user) {
+    return <PreLoginPage onLogin={handleLogin} />;
+  }
+
+  switch (user.userType) {
+    case 'admin':
+      return <AdminDashboard onLogout={handleLogout} />;
+    case 'staff':
+      return <StaffDashboard onLogout={handleLogout} />;
+    case 'client':
+    default:
+      return <ClientDashboard userMobile={user.mobile} onLogout={handleLogout} />;
+  }
 };
 
 export default Index;
