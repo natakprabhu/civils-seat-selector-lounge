@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Phone } from 'lucide-react';
 
 interface PreLoginPageProps {
@@ -17,7 +18,6 @@ const PreLoginPage: React.FC<PreLoginPageProps> = ({ onLogin }) => {
 
   const handleSendOtp = () => {
     setIsLoading(true);
-    // Simulate OTP sending
     setTimeout(() => {
       setShowOtpInput(true);
       setIsLoading(false);
@@ -26,11 +26,9 @@ const PreLoginPage: React.FC<PreLoginPageProps> = ({ onLogin }) => {
 
   const handleVerifyOtp = () => {
     setIsLoading(true);
-    // Simulate OTP verification and determine user type
     setTimeout(() => {
-      // For demo: admin (9999999999), staff (8888888888), others (client)
       let userType: 'client' | 'admin' | 'staff' = 'client';
-      if (mobile === '9999999999') userType = 'admin';
+      if (mobile === '9873579556') userType = 'admin';
       else if (mobile === '8888888888') userType = 'staff';
       
       onLogin(mobile, userType);
@@ -39,56 +37,64 @@ const PreLoginPage: React.FC<PreLoginPageProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="text-center pb-4">
-          <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">CL</span>
-          </div>
-          <CardTitle className="text-2xl font-bold text-blue-900">Civils Lounge</CardTitle>
-          <p className="text-gray-600">UPSC Library Management</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Input
-              type="tel"
-              placeholder="Enter Mobile Number"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              className="text-center text-lg"
-              disabled={showOtpInput}
-            />
-          </div>
-          
-          {showOtpInput && (
-            <div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+          <CardHeader className="text-center pb-8 pt-8">
+            <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <span className="text-white font-bold text-2xl">CL</span>
+            </div>
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-700 to-indigo-800 bg-clip-text text-transparent">
+              Civils Lounge
+            </CardTitle>
+            <p className="text-slate-600 text-lg mt-2">UPSC Library Management</p>
+          </CardHeader>
+          <CardContent className="space-y-6 px-8 pb-8">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Mobile Number</label>
               <Input
-                type="text"
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                className="text-center text-lg"
-                maxLength={6}
+                type="tel"
+                placeholder="Enter Mobile Number"
+                value={mobile}
+                onChange={(e) => setMobile(e.target.value)}
+                className="h-12 text-lg border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                disabled={showOtpInput}
               />
             </div>
-          )}
-          
-          <Button
-            onClick={showOtpInput ? handleVerifyOtp : handleSendOtp}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-3"
-            disabled={isLoading || !mobile}
-          >
-            <Phone className="w-5 h-5 mr-2" />
-            {isLoading ? 'Processing...' : showOtpInput ? 'Verify OTP' : 'Login via OTP'}
-          </Button>
-          
-          {showOtpInput && (
-            <p className="text-sm text-gray-600 text-center">
-              OTP sent to {mobile}. Demo: Use any 6-digit code.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+            
+            {showOtpInput && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Enter OTP</label>
+                <div className="flex justify-center">
+                  <InputOTP maxLength={4} value={otp} onChange={setOtp}>
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} className="w-12 h-12 text-lg" />
+                      <InputOTPSlot index={1} className="w-12 h-12 text-lg" />
+                      <InputOTPSlot index={2} className="w-12 h-12 text-lg" />
+                      <InputOTPSlot index={3} className="w-12 h-12 text-lg" />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+              </div>
+            )}
+            
+            <Button
+              onClick={showOtpInput ? handleVerifyOtp : handleSendOtp}
+              className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white text-lg font-semibold shadow-lg"
+              disabled={isLoading || !mobile || (showOtpInput && otp.length !== 4)}
+            >
+              <Phone className="w-5 h-5 mr-2" />
+              {isLoading ? 'Processing...' : showOtpInput ? 'Verify OTP' : 'Send OTP'}
+            </Button>
+            
+            {showOtpInput && (
+              <p className="text-sm text-slate-600 text-center">
+                OTP sent to {mobile}. Demo: Use any 4-digit code.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

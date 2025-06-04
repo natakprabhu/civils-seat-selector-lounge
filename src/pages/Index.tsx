@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import PreLoginPage from '@/components/PreLoginPage';
 import ClientDashboard from '@/components/ClientDashboard';
-import AdminDashboard from '@/components/AdminDashboard';
+import AdminPage from '@/components/AdminPage';
 import StaffDashboard from '@/components/StaffDashboard';
 
 const Index = () => {
@@ -25,7 +25,7 @@ const Index = () => {
 
   switch (user.userType) {
     case 'admin':
-      return <AdminDashboard onLogout={handleLogout} />;
+      return <AdminPage onLogout={handleLogout} />;
     case 'staff':
       return <StaffDashboard onLogout={handleLogout} />;
     case 'client':
