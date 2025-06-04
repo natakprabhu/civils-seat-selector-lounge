@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -75,10 +74,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
     amount: number;
     method: 'cash' | 'online';
     date: string;
+    validityExtension: number; // in months
   }>({
     amount: 0,
     method: 'cash',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    validityExtension: 1
   });
 
   const handleApprove = (id: string) => {
@@ -138,7 +139,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
     setPaymentData({
       amount: booking.paidAmount || 0,
       method: booking.paymentMethod || 'cash',
-      date: booking.paidOn || new Date().toISOString().split('T')[0]
+      date: booking.paidOn || new Date().toISOString().split('T')[0],
+      validityExtension: 1
     });
   };
 
@@ -150,19 +152,26 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
         booking.id === paymentEditId 
           ? { 
               ...booking, 
-              paidAmount: paymentData.amount,
+              paidAmount: (booking.paidAmount || 0) + paymentData.amount,
               paymentMethod: paymentData.method,
               paidOn: paymentData.date,
-              paymentStatus: paymentData.amount > 0 ? 'approved' : 'pending'
+              paymentStatus: paymentData.amount > 0 ? 'approved' : 'pending',
+              // Calculate new validity based on extension
+              validityExtendedBy: paymentData.validityExtension
             }
           : booking
       )
     );
     setPaymentEditId(null);
-    setPaymentData({ amount: 0, method: 'cash', date: new Date().toISOString().split('T')[0] });
+    setPaymentData({ 
+      amount: 0, 
+      method: 'cash', 
+      date: new Date().toISOString().split('T')[0],
+      validityExtension: 1
+    });
     toast({
       title: "Payment Updated",
-      description: "The payment details have been updated successfully.",
+      description: `Payment recorded successfully. Validity extended by ${paymentData.validityExtension} month(s).`,
     });
   };
 
@@ -322,6 +331,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                                 onChange={(e) => setPaymentData({...paymentData, date: e.target.value})}
                                 className="h-6 text-xs"
                               />
+                              <Input
+                                type="number"
+                                value={paymentData.validityExtension}
+                                onChange={(e) => setPaymentData({...paymentData, validityExtension: Number(e.target.value)})}
+                                className="h-6 text-xs"
+                                placeholder="Validity (months)"
+                                min="1"
+                              />
                             </div>
                           ) : (
                             <div>
@@ -334,6 +351,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                               )}
                               {booking.paymentMethod && (
                                 <p className="text-xs text-slate-500 capitalize">{booking.paymentMethod}</p>
+                              )}
+                              {booking.validityExtendedBy && (
+                                <p className="text-xs text-blue-500">+{booking.validityExtendedBy} months</p>
                               )}
                             </div>
                           )}
