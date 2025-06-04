@@ -13,7 +13,6 @@ import {
   X,
   Edit3,
   Save,
-  Cancel,
   DollarSign
 } from 'lucide-react';
 
