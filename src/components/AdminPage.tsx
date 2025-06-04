@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -286,7 +285,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                             Save
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
-                            <Cancel className="w-4 h-4 mr-1" />
+                            <X className="w-4 h-4 mr-1" />
                             Cancel
                           </Button>
                         </>
