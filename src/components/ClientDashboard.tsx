@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +6,8 @@ import { toast } from '@/hooks/use-toast';
 import SeatSelection from './SeatSelection';
 import BookingForm from './BookingForm';
 import BookingSuccess from './BookingSuccess';
-import { Plus, LogOut, Users, Calendar, CheckCircle, CreditCard, UserCheck, AlertCircle, DollarSign } from 'lucide-react';
+import ReceiptGenerator from './ReceiptGenerator';
+import { Plus, LogOut, Users, Calendar, CheckCircle, CreditCard, UserCheck, AlertCircle, IndianRupee } from 'lucide-react';
 
 interface ClientDashboardProps {
   userMobile: string;
@@ -17,6 +17,7 @@ interface ClientDashboardProps {
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'seat-selection' | 'booking-form' | 'success'>('dashboard');
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   // Generate seats with proper row-based numbering
   const [seats] = useState(() => {
@@ -46,19 +47,53 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     return seatData;
   });
 
-  const [userStatus] = useState(() => {
-    const isSubscribed = Math.random() > 0.3;
-    const paymentStatus = ['approved', 'waiting_for_approval', 'pending_payment'][Math.floor(Math.random() * 3)];
+  const [userStatus, setUserStatus] = useState(() => {
+    const hasValidPayment = Math.random() > 0.3;
+    const paymentStatus = hasValidPayment ? 'approved' : ['waiting_for_approval', 'pending'][Math.floor(Math.random() * 2)];
+    
+    // Only assign seat if payment is approved
+    const assignedSeat = hasValidPayment && paymentStatus === 'approved' 
+      ? seats.find(s => s.status === 'booked')?.number || null 
+      : null;
     
     return {
-      isSubscribed,
-      subscriptionValidTill: isSubscribed ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null,
+      isSubscribed: hasValidPayment,
+      subscriptionValidTill: hasValidPayment ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null,
       paymentStatus,
-      currentSeat: isSubscribed ? seats.find(s => s.status === 'booked')?.number || null : null,
-      paidAmount: isSubscribed ? 15000 : 0,
+      currentSeat: assignedSeat,
+      paidAmount: hasValidPayment ? 15000 : 0,
+      paidOn: hasValidPayment ? '2024-01-16' : null,
       requestSubmittedAt: '2024-01-15T10:30:00Z'
     };
   });
+
+  // Check for payment approval status change
+  useEffect(() => {
+    const checkPaymentStatus = () => {
+      // Simulate checking for payment approval
+      if (userStatus.paymentStatus === 'waiting_for_approval') {
+        // Simulate random approval for demo
+        const isApproved = Math.random() > 0.8;
+        if (isApproved) {
+          setUserStatus(prev => ({
+            ...prev,
+            paymentStatus: 'approved',
+            currentSeat: seats.find(s => s.status === 'vacant')?.number || null,
+            paidAmount: 15000,
+            paidOn: new Date().toISOString().split('T')[0]
+          }));
+          setShowReceipt(true);
+          toast({
+            title: "🎉 Payment Approved!",
+            description: "Your booking has been confirmed. Download your receipt now!",
+          });
+        }
+      }
+    };
+
+    const interval = setInterval(checkPaymentStatus, 10000); // Check every 10 seconds
+    return () => clearInterval(interval);
+  }, [userStatus.paymentStatus, seats]);
 
   const stats = {
     total: seats.length,
@@ -79,6 +114,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
   const handleSubmitBooking = (bookingData: any) => {
     console.log('Booking submitted:', bookingData);
+    
+    // Update user status to waiting for approval
+    setUserStatus(prev => ({
+      ...prev,
+      paymentStatus: 'waiting_for_approval',
+      requestSubmittedAt: new Date().toISOString()
+    }));
+
     toast({
       title: "Booking Request Submitted!",
       description: "Your seat booking request is waiting for admin approval. Contact admin via WhatsApp for any queries.",
@@ -97,7 +140,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         return <Badge className="bg-green-100 text-green-800 border-green-200">Approved</Badge>;
       case 'waiting_for_approval':
         return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Waiting for Approval</Badge>;
-      case 'pending_payment':
+      case 'pending':
         return <Badge className="bg-red-100 text-red-800 border-red-200">Pending Payment</Badge>;
       default:
         return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Unknown</Badge>;
@@ -107,6 +150,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
+
+  const canBookSeat = userStatus.paymentStatus === 'approved' && userStatus.paidAmount > 0;
 
   if (currentView === 'seat-selection') {
     return (
@@ -191,6 +236,40 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Receipt Modal */}
+        {showReceipt && userStatus.paymentStatus === 'approved' && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-green-700 mb-2">🎉 Hurray!</h2>
+                <p className="text-gray-600">Your booking has been approved!</p>
+              </div>
+              <ReceiptGenerator
+                booking={{
+                  id: '1',
+                  name: 'Student Name',
+                  mobile: userMobile,
+                  email: 'student@email.com',
+                  seatNumber: userStatus.currentSeat || '',
+                  duration: '6',
+                  paidAmount: userStatus.paidAmount,
+                  paidOn: userStatus.paidOn || ''
+                }}
+              />
+              <Button 
+                onClick={() => setShowReceipt(false)} 
+                variant="outline" 
+                className="w-full mt-4"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* User Status Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
@@ -240,13 +319,42 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-emerald-700">Paid Amount</p>
-                  <p className="text-2xl font-bold text-emerald-900">₹{userStatus.paidAmount}</p>
+                  <div className="flex items-center gap-1">
+                    <IndianRupee className="w-5 h-5 text-emerald-600" />
+                    <p className="text-2xl font-bold text-emerald-900">{userStatus.paidAmount}</p>
+                  </div>
+                  {userStatus.paidOn && (
+                    <p className="text-xs text-emerald-600 mt-1">Paid on: {userStatus.paidOn}</p>
+                  )}
                 </div>
-                <DollarSign className="w-8 h-8 text-emerald-600" />
+                <IndianRupee className="w-8 h-8 text-emerald-600" />
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Receipt Download Card for Approved Payments */}
+        {userStatus.paymentStatus === 'approved' && userStatus.paidAmount > 0 && (
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-emerald-50 mb-8">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <CheckCircle className="w-10 h-10 text-green-600" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-green-800">Payment Confirmed</h3>
+                    <p className="text-green-700">Your receipt is ready for download</p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => setShowReceipt(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Download Receipt
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Waiting Status Card */}
         {userStatus.paymentStatus === 'waiting_for_approval' && (
@@ -345,6 +453,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               </div>
             </div>
             
+            {/* ... keep existing code (seat grid rendering) */}
             <div className="space-y-3 mb-6">
               {[
                 { letter: 'A', count: 12, startIndex: 0, flipped: true },
@@ -382,18 +491,16 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                 onClick={() => setCurrentView('seat-selection')}
                 className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 px-8 py-3 shadow-lg"
                 size="lg"
-                disabled={!userStatus.isSubscribed || userStatus.paymentStatus !== 'approved'}
+                disabled={!canBookSeat}
               >
                 <Plus className="w-5 h-5 mr-2" />
-                {userStatus.isSubscribed && userStatus.paymentStatus === 'approved' 
-                  ? 'Book My Seat' 
-                  : 'Subscription Required'}
+                {canBookSeat ? 'Book My Seat' : 'Payment Required'}
               </Button>
             </div>
             
-            {(!userStatus.isSubscribed || userStatus.paymentStatus !== 'approved') && (
+            {!canBookSeat && (
               <p className="text-center text-sm text-slate-600 mt-2">
-                Please ensure your subscription is active and payment is approved to book seats.
+                Please ensure your payment is approved to book seats.
               </p>
             )}
           </CardContent>

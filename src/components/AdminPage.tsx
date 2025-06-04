@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +14,9 @@ import {
   X,
   Edit3,
   Save,
-  DollarSign
+  DollarSign,
+  Upload,
+  IndianRupee
 } from 'lucide-react';
 
 interface AdminPageProps {
@@ -31,6 +34,8 @@ interface BookingRequest {
   submittedAt: string;
   paymentStatus: 'pending' | 'waiting_for_approval' | 'approved';
   paidAmount?: number;
+  paidOn?: string;
+  paymentMethod?: 'cash' | 'online';
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
@@ -57,18 +62,30 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
       status: 'approved',
       submittedAt: '2024-01-14T15:45:00Z',
       paymentStatus: 'approved',
-      paidAmount: 15000
+      paidAmount: 15000,
+      paidOn: '2024-01-16',
+      paymentMethod: 'online'
     }
   ]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<BookingRequest>>({});
+  const [paymentEditId, setPaymentEditId] = useState<string | null>(null);
+  const [paymentData, setPaymentData] = useState<{
+    amount: number;
+    method: 'cash' | 'online';
+    date: string;
+  }>({
+    amount: 0,
+    method: 'cash',
+    date: new Date().toISOString().split('T')[0]
+  });
 
   const handleApprove = (id: string) => {
     setBookingRequests(prev => 
       prev.map(booking => 
         booking.id === id 
-          ? { ...booking, status: 'approved', paymentStatus: 'approved' }
+          ? { ...booking, status: 'approved' }
           : booking
       )
     );
@@ -113,6 +130,39 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
     toast({
       title: "Booking Updated",
       description: "The booking details have been updated successfully.",
+    });
+  };
+
+  const handlePaymentEdit = (booking: BookingRequest) => {
+    setPaymentEditId(booking.id);
+    setPaymentData({
+      amount: booking.paidAmount || 0,
+      method: booking.paymentMethod || 'cash',
+      date: booking.paidOn || new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const handleSavePayment = () => {
+    if (!paymentEditId) return;
+    
+    setBookingRequests(prev => 
+      prev.map(booking => 
+        booking.id === paymentEditId 
+          ? { 
+              ...booking, 
+              paidAmount: paymentData.amount,
+              paymentMethod: paymentData.method,
+              paidOn: paymentData.date,
+              paymentStatus: paymentData.amount > 0 ? 'approved' : 'pending'
+            }
+          : booking
+      )
+    );
+    setPaymentEditId(null);
+    setPaymentData({ amount: 0, method: 'cash', date: new Date().toISOString().split('T')[0] });
+    toast({
+      title: "Payment Updated",
+      description: "The payment details have been updated successfully.",
     });
   };
 
@@ -248,20 +298,48 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                         </div>
                         <div>
                           <p className="text-sm text-slate-600 mb-1">Payment</p>
-                          {editingId === booking.id ? (
-                            <Input
-                              type="number"
-                              value={editData.paidAmount || 0}
-                              onChange={(e) => setEditData({...editData, paidAmount: Number(e.target.value)})}
-                              className="h-8"
-                              placeholder="Amount"
-                            />
+                          {paymentEditId === booking.id ? (
+                            <div className="space-y-1">
+                              <Input
+                                type="number"
+                                value={paymentData.amount}
+                                onChange={(e) => setPaymentData({...paymentData, amount: Number(e.target.value)})}
+                                className="h-6 text-xs"
+                                placeholder="Amount"
+                              />
+                              <Select value={paymentData.method} onValueChange={(value: 'cash' | 'online') => setPaymentData({...paymentData, method: value})}>
+                                <SelectTrigger className="h-6 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="cash">Cash</SelectItem>
+                                  <SelectItem value="online">Online</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="date"
+                                value={paymentData.date}
+                                onChange={(e) => setPaymentData({...paymentData, date: e.target.value})}
+                                className="h-6 text-xs"
+                              />
+                            </div>
                           ) : (
-                            <p className="font-semibold text-green-600">₹{booking.paidAmount || 0}</p>
+                            <div>
+                              <div className="flex items-center gap-1">
+                                <IndianRupee className="w-3 h-3 text-green-600" />
+                                <span className="font-semibold text-green-600">{booking.paidAmount || 0}</span>
+                              </div>
+                              {booking.paidOn && (
+                                <p className="text-xs text-slate-500">Paid on: {booking.paidOn}</p>
+                              )}
+                              {booking.paymentMethod && (
+                                <p className="text-xs text-slate-500 capitalize">{booking.paymentMethod}</p>
+                              )}
+                            </div>
                           )}
                         </div>
                         <div>
-                          <p className="text-sm text-slate-600 mb-1">Submitted</p>
+                          <p className="text-sm text-slate-600 mb-1">Status</p>
                           <p className="text-xs text-slate-500">{formatDateTime(booking.submittedAt)}</p>
                           <Badge 
                             variant={
@@ -288,11 +366,26 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                             Cancel
                           </Button>
                         </>
+                      ) : paymentEditId === booking.id ? (
+                        <>
+                          <Button size="sm" onClick={handleSavePayment} className="bg-green-600 hover:bg-green-700">
+                            <Save className="w-4 h-4 mr-1" />
+                            Save Payment
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setPaymentEditId(null)}>
+                            <X className="w-4 h-4 mr-1" />
+                            Cancel
+                          </Button>
+                        </>
                       ) : (
                         <>
                           <Button size="sm" variant="outline" onClick={() => handleEdit(booking)}>
                             <Edit3 className="w-4 h-4 mr-1" />
                             Edit
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handlePaymentEdit(booking)}>
+                            <DollarSign className="w-4 h-4 mr-1" />
+                            Payment
                           </Button>
                           {booking.status === 'pending' && (
                             <>
