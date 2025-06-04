@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -170,6 +169,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
+        
         {/* Status Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
