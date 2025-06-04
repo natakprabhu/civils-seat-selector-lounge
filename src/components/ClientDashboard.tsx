@@ -43,6 +43,13 @@ interface BookingData {
   paymentMethod?: 'cash' | 'online';
 }
 
+// Mock seat data
+const mockSeats = Array.from({ length: 60 }, (_, i) => ({
+  id: `seat-${i + 1}`,
+  number: `${String.fromCharCode(65 + Math.floor(i / 12))}${(i % 12) + 1}`,
+  status: Math.random() > 0.7 ? 'booked' : 'vacant' as 'vacant' | 'booked' | 'waiting_for_approval'
+}));
+
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const [currentStep, setCurrentStep] = useState<BookingStep>('seat-selection');
   const [selectedSeat, setSelectedSeat] = useState<string>('');
@@ -67,8 +74,15 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   // Mock biometric status
   const biometricEnrolled = true;
 
-  const handleSeatSelect = (seatNumber: string) => {
-    setSelectedSeat(seatNumber);
+  const handleSeatSelect = (seatId: string) => {
+    const seat = mockSeats.find(s => s.id === seatId);
+    if (seat) {
+      setSelectedSeat(seat.number);
+      setCurrentStep('booking-form');
+    }
+  };
+
+  const handleConfirmSelection = () => {
     setCurrentStep('booking-form');
   };
 
@@ -89,6 +103,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const handleNewBooking = () => {
     setCurrentStep('seat-selection');
     setSelectedSeat('');
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentStep('seat-selection');
   };
 
   if (showPaymentHistory) {
@@ -306,18 +324,21 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </CardHeader>
           <CardContent className="p-6">
             {currentStep === 'seat-selection' && (
-              <SeatSelection onSeatSelect={handleSeatSelect} />
+              <SeatSelection 
+                seats={mockSeats}
+                selectedSeat={selectedSeat ? mockSeats.find(s => s.number === selectedSeat)?.id || null : null}
+                onSeatSelect={handleSeatSelect}
+                onConfirmSelection={handleConfirmSelection}
+              />
             )}
             {currentStep === 'booking-form' && (
               <BookingForm
                 selectedSeat={selectedSeat}
-                userMobile={userMobile}
-                onSubmit={handleBookingSubmit}
-                onBack={() => setCurrentStep('seat-selection')}
+                onSubmitBooking={handleBookingSubmit}
               />
             )}
             {currentStep === 'booking-success' && (
-              <BookingSuccess onNewBooking={handleNewBooking} />
+              <BookingSuccess onBackToDashboard={handleBackToDashboard} />
             )}
           </CardContent>
         </Card>

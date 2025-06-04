@@ -14,7 +14,6 @@ import {
   Edit3,
   Save,
   DollarSign,
-  Upload,
   IndianRupee
 } from 'lucide-react';
 
@@ -35,6 +34,7 @@ interface BookingRequest {
   paidAmount?: number;
   paidOn?: string;
   paymentMethod?: 'cash' | 'online';
+  validityExtendedBy?: number;
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
