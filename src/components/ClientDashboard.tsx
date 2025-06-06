@@ -42,18 +42,56 @@ interface BookingData {
   paymentMethod?: 'cash' | 'online';
 }
 
-// Mock seat data
-const mockSeats = Array.from({ length: 60 }, (_, i) => ({
-  id: `seat-${i + 1}`,
-  number: `${String.fromCharCode(65 + Math.floor(i / 12))}${(i % 12) + 1}`,
-  status: Math.random() > 0.7 ? 'booked' : 'vacant' as 'vacant' | 'booked' | 'waiting_for_approval'
-}));
+// Updated seat data to match the new layout
+const createSeatsData = () => {
+  const seats = [];
+  
+  // Left section seats
+  const leftSeats = [
+    'A1', 'A2',
+    'B1', 'B2', 'B3', 'B4',
+    'C1', 'C2', 'C3', 'C4',
+    'D1', 'D2', 'D3', 'D4',
+    'E1', 'E2', 'E3', 'E4',
+    'F1', 'F2', 'F3', 'F4'
+  ];
+  
+  // Right section seats
+  const rightSeats = [
+    'A5', 'A6', 'A7',
+    'B5', 'B6', 'B7',
+    'C5', 'C6', 'C7',
+    'D5', 'D6', 'D7',
+    'E5', 'E6', 'E7',
+    'F5', 'F6', 'F7',
+    'G5', 'G6', 'G7',
+    'H5', 'H6', 'H7',
+    'I5', 'I6', 'I7',
+    'J5', 'J6', 'J7'
+  ];
+  
+  const allSeatNumbers = [...leftSeats, ...rightSeats];
+  
+  // Create seat objects with some randomly booked seats
+  const bookedSeats = ['B2', 'C3', 'D7', 'F1', 'H6']; // Same as in HTML example
+  
+  allSeatNumbers.forEach((seatNumber, index) => {
+    seats.push({
+      id: `seat-${seatNumber}`,
+      number: seatNumber,
+      status: bookedSeats.includes(seatNumber) ? 'booked' : 'vacant' as 'vacant' | 'booked' | 'waiting_for_approval'
+    });
+  });
+  
+  return seats;
+};
 
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const [currentStep, setCurrentStep] = useState<BookingStep>('seat-selection');
   const [selectedSeat, setSelectedSeat] = useState<string>('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  const [seats] = useState(() => createSeatsData());
 
   // Mock user data - in real app this would come from backend
   const [userBooking, setUserBooking] = useState<BookingData>({
@@ -74,7 +112,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const biometricEnrolled = true;
 
   const handleSeatSelect = (seatId: string) => {
-    const seat = mockSeats.find(s => s.id === seatId);
+    const seat = seats.find(s => s.id === seatId);
     if (seat) {
       setSelectedSeat(seat.number);
       setCurrentStep('booking-form');
@@ -325,8 +363,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           <CardContent className="p-6">
             {currentStep === 'seat-selection' && (
               <SeatSelection 
-                seats={mockSeats}
-                selectedSeat={selectedSeat ? mockSeats.find(s => s.number === selectedSeat)?.id || null : null}
+                seats={seats}
+                selectedSeat={selectedSeat ? seats.find(s => s.number === selectedSeat)?.id || null : null}
                 onSeatSelect={handleSeatSelect}
                 onConfirmSelection={handleConfirmSelection}
               />
