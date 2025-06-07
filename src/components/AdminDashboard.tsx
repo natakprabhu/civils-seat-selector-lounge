@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from '@/hooks/use-toast';
 import { 
   LogOut, 
   Users, 
@@ -14,7 +16,13 @@ import {
   Check, 
   X,
   Printer,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  Edit,
+  ToggleLeft,
+  ToggleRight,
+  IndianRupee,
+  FileImage
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -28,9 +36,23 @@ interface BookingRequest {
   email: string;
   seatNumber: string;
   duration: string;
+  amount: number;
   status: 'pending' | 'approved' | 'rejected';
   submittedAt: string;
-  paymentStatus: 'pending' | 'sent' | 'completed';
+  paymentMode?: 'cash' | 'online';
+  paymentDate?: string;
+  screenshot?: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  lastPayment: string;
+  expiry: string;
+  remainingDays: number;
+  isActive: boolean;
+  seatNumber?: string;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
@@ -40,71 +62,154 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       name: 'Rahul Sharma',
       mobile: '9876543210',
       email: 'rahul@email.com',
-      seatNumber: '05',
+      seatNumber: 'A5',
       duration: '6',
+      amount: 15000,
       status: 'pending',
       submittedAt: '2024-01-15T10:30:00Z',
-      paymentStatus: 'pending'
     },
     {
       id: '2',
       name: 'Priya Singh',
       mobile: '9876543211',
       email: 'priya@email.com',
-      seatNumber: '12',
+      seatNumber: 'B12',
       duration: '3',
+      amount: 7500,
       status: 'approved',
       submittedAt: '2024-01-14T15:45:00Z',
-      paymentStatus: 'completed'
-    },
-    {
-      id: '3',
-      name: 'Amit Kumar',
-      mobile: '9876543212',
-      email: 'amit@email.com',
-      seatNumber: '08',
-      duration: '12',
-      status: 'pending',
-      submittedAt: '2024-01-15T09:15:00Z',
-      paymentStatus: 'pending'
+      paymentMode: 'online',
+      paymentDate: '2024-01-16'
     }
   ]);
 
-  const handleSendPaymentLink = (bookingId: string) => {
-    setBookingRequests(prev => 
-      prev.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, paymentStatus: 'sent' }
-          : booking
-      )
-    );
+  const [users, setUsers] = useState<User[]>([
+    {
+      id: '1',
+      name: 'Rahul Sharma',
+      email: 'rahul@email.com',
+      lastPayment: '2024-01-16',
+      expiry: '2024-07-16',
+      remainingDays: 45,
+      isActive: true,
+      seatNumber: 'A5'
+    },
+    {
+      id: '2',
+      name: 'Priya Singh',
+      email: 'priya@email.com',
+      lastPayment: '2024-01-10',
+      expiry: '2024-04-10',
+      remainingDays: 15,
+      isActive: true,
+      seatNumber: 'B12'
+    }
+  ]);
+
+  const handleApproveRequest = async (requestId: string) => {
+    try {
+      // Mock API call
+      console.log('Approving request:', requestId);
+      
+      setBookingRequests(prev => 
+        prev.map(req => 
+          req.id === requestId 
+            ? { ...req, status: 'approved' }
+            : req
+        )
+      );
+      
+      toast({
+        title: "Request Approved",
+        description: "Booking request has been approved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve request.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleApproveBooking = (bookingId: string) => {
-    setBookingRequests(prev => 
-      prev.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, status: 'approved', paymentStatus: 'completed' }
-          : booking
-      )
-    );
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      // Mock API call
+      console.log('Rejecting request:', requestId);
+      
+      setBookingRequests(prev => 
+        prev.map(req => 
+          req.id === requestId 
+            ? { ...req, status: 'rejected' }
+            : req
+        )
+      );
+      
+      toast({
+        title: "Request Rejected",
+        description: "Booking request has been rejected.",
+        variant: "destructive"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject request.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleRejectBooking = (bookingId: string) => {
-    setBookingRequests(prev => 
-      prev.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, status: 'rejected' }
-          : booking
-      )
-    );
+  const handleToggleUserStatus = async (userId: string) => {
+    try {
+      // Mock API call
+      console.log('Toggling user status:', userId);
+      
+      setUsers(prev => 
+        prev.map(user => 
+          user.id === userId 
+            ? { ...user, isActive: !user.isActive }
+            : user
+        )
+      );
+      
+      toast({
+        title: "User Status Updated",
+        description: "User status has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update user status.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleScreenshotUpload = (requestId: string, file: File) => {
+    // Mock file upload
+    const reader = new FileReader();
+    reader.onload = () => {
+      setBookingRequests(prev => 
+        prev.map(req => 
+          req.id === requestId 
+            ? { ...req, screenshot: reader.result as string }
+            : req
+        )
+      );
+      
+      toast({
+        title: "Screenshot Uploaded",
+        description: "Payment screenshot has been uploaded successfully.",
+      });
+    };
+    reader.readAsDataURL(file);
   };
 
   const stats = {
     totalRequests: bookingRequests.length,
-    pendingRequests: bookingRequests.filter(b => b.status === 'pending').length,
-    approvedBookings: bookingRequests.filter(b => b.status === 'approved').length,
-    rejectedRequests: bookingRequests.filter(b => b.status === 'rejected').length
+    pendingRequests: bookingRequests.filter(r => r.status === 'pending').length,
+    approvedRequests: bookingRequests.filter(r => r.status === 'approved').length,
+    rejectedRequests: bookingRequests.filter(r => r.status === 'rejected').length
   };
 
   return (
@@ -130,10 +235,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Stats Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        {/* Section 1: Stats Cards */}
+        <div className="grid md:grid-cols-4 gap-6">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -163,7 +267,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Approved</p>
-                  <p className="text-2xl font-bold text-green-600">{stats.approvedBookings}</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.approvedRequests}</p>
                 </div>
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
@@ -183,96 +287,160 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           </Card>
         </div>
 
-        {/* Booking Requests */}
+        {/* Section 2: Request Management Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Booking Requests Management</CardTitle>
+            <CardTitle>Request Management</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {bookingRequests.map((booking) => (
-                <div key={booking.id} className="border rounded-lg p-6 bg-white">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-600">Name</p>
-                          <p className="font-semibold">{booking.name}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600">Contact</p>
-                          <p className="text-sm">{booking.mobile}</p>
-                          <p className="text-sm text-gray-500">{booking.email}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600">Seat & Duration</p>
-                          <p className="font-semibold">Seat {booking.seatNumber}</p>
-                          <p className="text-sm text-gray-500">{booking.duration} months</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600">Status</p>
-                          <div className="flex flex-col gap-1">
-                            <Badge 
-                              variant={
-                                booking.status === 'approved' ? 'default' : 
-                                booking.status === 'rejected' ? 'destructive' : 'secondary'
-                              }
-                            >
-                              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                            </Badge>
-                            {booking.status === 'approved' && (
-                              <Badge variant="outline" className="text-xs">
-                                Payment: {booking.paymentStatus}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
+              {bookingRequests.map((request) => (
+                <div key={request.id} className="border rounded-lg p-6 bg-white">
+                  <div className="grid md:grid-cols-6 gap-4 items-center">
+                    <div>
+                      <p className="text-sm text-gray-600">Name</p>
+                      <p className="font-semibold">{request.name}</p>
+                      <p className="text-sm text-gray-500">{request.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Seat & Duration</p>
+                      <p className="font-semibold">Seat {request.seatNumber}</p>
+                      <p className="text-sm text-gray-500">{request.duration} months</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Amount</p>
+                      <div className="flex items-center gap-1">
+                        <IndianRupee className="w-4 h-4 text-green-600" />
+                        <span className="font-semibold text-green-600">{request.amount}</span>
                       </div>
                     </div>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      {booking.status === 'pending' && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSendPaymentLink(booking.id)}
-                            disabled={booking.paymentStatus === 'sent'}
-                          >
-                            <Send className="w-4 h-4 mr-1" />
-                            {booking.paymentStatus === 'sent' ? 'Link Sent' : 'Send Payment Link'}
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={() => handleApproveBooking(booking.id)}
-                          >
-                            <Check className="w-4 h-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleRejectBooking(booking.id)}
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Reject
-                          </Button>
-                        </>
+                    <div>
+                      <p className="text-sm text-gray-600">Payment Info</p>
+                      {request.paymentMode && (
+                        <p className="text-sm capitalize">{request.paymentMode}</p>
                       )}
-                      
-                      {booking.status === 'approved' && (
-                        <>
-                          <Button size="sm" variant="outline">
-                            <Printer className="w-4 h-4 mr-1" />
-                            Print Receipt
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <RefreshCw className="w-4 h-4 mr-1" />
-                            Resend Receipt
-                          </Button>
-                        </>
+                      {request.paymentDate && (
+                        <p className="text-xs text-gray-500">{request.paymentDate}</p>
                       )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Screenshot</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleScreenshotUpload(request.id, file);
+                          }}
+                          className="hidden"
+                          id={`upload-${request.id}`}
+                        />
+                        <label htmlFor={`upload-${request.id}`}>
+                          <Button size="sm" variant="outline" asChild>
+                            <span>
+                              <Upload className="w-4 h-4 mr-1" />
+                              Upload
+                            </span>
+                          </Button>
+                        </label>
+                        {request.screenshot && (
+                          <Button size="sm" variant="outline">
+                            <FileImage className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Actions</p>
+                      <div className="flex gap-2">
+                        <Badge 
+                          variant={
+                            request.status === 'approved' ? 'default' : 
+                            request.status === 'rejected' ? 'destructive' : 'secondary'
+                          }
+                        >
+                          {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                        </Badge>
+                        {request.status === 'pending' && (
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => handleApproveRequest(request.id)}
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleRejectRequest(request.id)}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Section 3: User Management Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>User Management</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {users.map((user) => (
+                <div key={user.id} className="border rounded-lg p-6 bg-white">
+                  <div className="grid md:grid-cols-6 gap-4 items-center">
+                    <div>
+                      <p className="text-sm text-gray-600">Name</p>
+                      <p className="font-semibold">{user.name}</p>
+                      <p className="text-sm text-gray-500">{user.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Seat</p>
+                      <p className="font-semibold">{user.seatNumber || 'Not Assigned'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Last Payment</p>
+                      <p className="text-sm">{user.lastPayment}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Expiry</p>
+                      <p className="text-sm">{user.expiry}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Remaining Days</p>
+                      <p className={`font-semibold ${user.remainingDays < 30 ? 'text-red-600' : 'text-green-600'}`}>
+                        {user.remainingDays}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Status</p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleToggleUserStatus(user.id)}
+                          className="p-0"
+                        >
+                          {user.isActive ? (
+                            <ToggleRight className="w-6 h-6 text-green-600" />
+                          ) : (
+                            <ToggleLeft className="w-6 h-6 text-gray-400" />
+                          )}
+                        </Button>
+                        <span className={`text-sm ${user.isActive ? 'text-green-600' : 'text-gray-500'}`}>
+                          {user.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
