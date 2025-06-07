@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -165,21 +164,6 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             ))}
           </div>
         </div>
-
-        {selectedSeat && (
-          <div className="text-center bg-gradient-to-r from-slate-800/60 to-slate-900/40 border-2 border-cyan-500/50 rounded-xl p-6 mt-8 shadow-2xl shadow-cyan-500/20 backdrop-blur">
-            <p className="text-lg mb-4 text-white">
-              Selected Seat: <strong className="text-cyan-400 text-xl">{seats.find(s => s.id === selectedSeat)?.number}</strong>
-            </p>
-            <Button
-              onClick={onConfirmSelection}
-              className="button-primary px-8 py-3 shadow-xl"
-              size="lg"
-            >
-              Confirm Seat Selection
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

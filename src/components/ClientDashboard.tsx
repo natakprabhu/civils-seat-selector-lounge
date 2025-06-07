@@ -29,7 +29,8 @@ import {
   ChevronDown,
   Activity,
   TrendingUp,
-  Shield
+  Shield,
+  ArrowRight
 } from 'lucide-react';
 
 interface ClientDashboardProps {
@@ -125,6 +126,34 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     validTill: '2024-07-16',
     remainingDays: 45
   });
+
+  // Mock recent transactions data
+  const recentTransactions = [
+    {
+      id: 1,
+      date: '2024-01-16',
+      type: 'Seat Booking',
+      amount: 15000,
+      status: 'Completed',
+      description: 'Seat A5 - 6 months'
+    },
+    {
+      id: 2,
+      date: '2024-01-10',
+      type: 'Seat Change',
+      amount: 0,
+      status: 'Pending',
+      description: 'Change from A3 to A5'
+    },
+    {
+      id: 3,
+      date: '2023-12-15',
+      type: 'Extension',
+      amount: 7500,
+      status: 'Completed',
+      description: 'Extended 3 months'
+    }
+  ];
 
   const [bookingFormData, setBookingFormData] = useState({
     name: '',
@@ -236,7 +265,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+              <div className="w-12 h-12 bg-gradient-to-r from-slate-700 to-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-black/50 border border-slate-600">
                 <span className="text-white font-bold text-lg">CL</span>
               </div>
               <div>
@@ -248,7 +277,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               <Button 
                 variant="outline" 
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
-                className="border-slate-600 bg-slate-800/50 hover:bg-slate-700/50 text-white hover:border-slate-500"
+                className="border-slate-600 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white hover:border-slate-500 shadow-lg shadow-black/50"
               >
                 <User className="w-4 h-4 mr-2" />
                 Profile
@@ -309,8 +338,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Seats</p>
                 <p className="text-2xl font-bold text-white">{totalSeats}</p>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-400" />
+              <div className="w-12 h-12 bg-gradient-to-br from-slate-700/30 to-slate-900/30 rounded-lg flex items-center justify-center border border-slate-600">
+                <Users className="w-6 h-6 text-slate-300" />
               </div>
             </CardContent>
           </Card>
@@ -321,8 +350,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Available</p>
                 <p className="text-2xl font-bold text-white">{availableSeats}</p>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500/20 to-green-500/20 rounded-lg flex items-center justify-center">
-                <Check className="w-6 h-6 text-emerald-400" />
+              <div className="w-12 h-12 bg-gradient-to-br from-slate-700/30 to-slate-900/30 rounded-lg flex items-center justify-center border border-slate-600">
+                <Check className="w-6 h-6 text-slate-300" />
               </div>
             </CardContent>
           </Card>
@@ -333,8 +362,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">On Hold</p>
                 <p className="text-2xl font-bold text-white">{onHoldSeats}</p>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-br from-amber-500/20 to-yellow-500/20 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-amber-400" />
+              <div className="w-12 h-12 bg-gradient-to-br from-slate-700/30 to-slate-900/30 rounded-lg flex items-center justify-center border border-slate-600">
+                <Clock className="w-6 h-6 text-slate-300" />
               </div>
             </CardContent>
           </Card>
@@ -366,7 +395,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                 <div>
                   <p className="text-lg font-bold text-white mb-1">{userBooking.seatNumber}</p>
                   <p className="text-xs text-slate-400 mb-2">Valid till: {userBooking.validTill}</p>
-                  <Button size="sm" variant="outline" onClick={handleRequestSeatChange} className="border-slate-600 text-white hover:bg-slate-800">
+                  <Button 
+                    size="sm" 
+                    onClick={handleRequestSeatChange} 
+                    className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
+                  >
                     Request Change
                   </Button>
                 </div>
@@ -394,9 +427,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Payment History</p>
               <Button 
                 size="sm" 
-                variant="outline" 
                 onClick={() => setCurrentView('transactions')}
-                className="border-slate-600 text-white hover:bg-slate-800 mb-2"
+                className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600 mb-2"
               >
                 <History className="w-4 h-4 mr-1" />
                 View History
@@ -406,75 +438,48 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </Card>
         </div>
 
-        {/* Section 3: Booking Details */}
+        {/* Section 3: Recent Transactions */}
         <Card className="dashboard-card">
           <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
             <CardTitle className="text-xl font-bold text-white flex items-center justify-between">
-              Booking Details
-              <Button size="sm" variant="outline" onClick={() => setIsEditing(!isEditing)} className="border-slate-600 text-white hover:bg-slate-800">
-                <Edit className="w-4 h-4 mr-1" />
-                {isEditing ? 'Save' : 'Edit'}
+              Recent Transactions
+              <Button 
+                size="sm" 
+                onClick={() => setCurrentView('transactions')} 
+                className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
+              >
+                All Bookings
+                <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div>
-                <p className="text-sm text-slate-400 mb-1">Name</p>
-                {isEditing ? (
-                  <Input 
-                    value={userBooking.name} 
-                    onChange={(e) => setUserBooking({...userBooking, name: e.target.value})} 
-                    className="bg-slate-800 border-slate-600 text-white"
-                  />
-                ) : (
-                  <p className="font-semibold text-white">{userBooking.name}</p>
-                )}
-              </div>
-              <div>
-                <p className="text-sm text-slate-400 mb-1">Contact</p>
-                <p className="text-sm text-white">{userBooking.mobile}</p>
-                <p className="text-xs text-slate-500">(Non-editable)</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-400 mb-1">Email</p>
-                {isEditing ? (
-                  <Input 
-                    value={userBooking.email} 
-                    onChange={(e) => setUserBooking({...userBooking, email: e.target.value})} 
-                    className="bg-slate-800 border-slate-600 text-white"
-                  />
-                ) : (
-                  <p className="text-sm text-white">{userBooking.email}</p>
-                )}
-              </div>
-              <div>
-                <p className="text-sm text-slate-400 mb-1">Seat ID</p>
-                <p className="font-semibold text-white">{userBooking.seatNumber}</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-400 mb-1">Duration</p>
-                <p className="text-sm text-white">{userBooking.duration} months</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-400 mb-1">Payment Info</p>
-                <div className="flex items-center gap-1 mb-1">
-                  <IndianRupee className="w-3 h-3 text-white" />
-                  <span className="font-semibold text-white">{userBooking.paidAmount}</span>
+            <div className="space-y-4">
+              {recentTransactions.map((transaction) => (
+                <div key={transaction.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-800/30 to-slate-900/30 rounded-lg border border-slate-700/50">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center border border-slate-600">
+                      <Receipt className="w-5 h-5 text-slate-300" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white">{transaction.type}</p>
+                      <p className="text-sm text-slate-400">{transaction.description}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center gap-1 mb-1">
+                      <IndianRupee className="w-3 h-3 text-white" />
+                      <span className="font-semibold text-white">{transaction.amount}</span>
+                    </div>
+                    <Badge 
+                      variant={transaction.status === 'Completed' ? 'default' : 'secondary'}
+                      className="text-xs"
+                    >
+                      {transaction.status}
+                    </Badge>
+                  </div>
                 </div>
-                <Badge variant={userBooking.paymentStatus === 'approved' ? 'default' : 'secondary'}>
-                  {userBooking.paymentStatus === 'approved' ? 'Paid' : 'Pending'}
-                </Badge>
-              </div>
-              <div>
-                <p className="text-sm text-slate-400 mb-1">Actions</p>
-                {userBooking.status === 'approved' && userBooking.paymentStatus === 'approved' && (
-                  <Button size="sm" variant="outline" onClick={handleDownloadReceipt} className="border-slate-600 text-white hover:bg-slate-800">
-                    <Download className="w-3 h-3 mr-1" />
-                    Receipt
-                  </Button>
-                )}
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -499,12 +504,12 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       <Dialog open={showBookingModal} onOpenChange={setShowBookingModal}>
         <DialogContent className="max-w-md bg-slate-900 border border-slate-700 text-white">
           <DialogHeader>
-            <DialogTitle className="text-blue-400">Booking Request</DialogTitle>
+            <DialogTitle className="text-slate-300">Booking Request</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {/* Show seat image placeholder */}
             <div className="w-full h-32 bg-gradient-to-br from-slate-800 to-slate-700 rounded-lg flex items-center justify-center border border-slate-600">
-              <p className="text-blue-400 font-medium">Seat {bookingFormData.seatId} Image</p>
+              <p className="text-slate-300 font-medium">Seat {bookingFormData.seatId} Image</p>
             </div>
             
             <div>
@@ -558,10 +563,17 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               />
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleBookingSubmit} className="flex-1 button-primary">
+              <Button 
+                onClick={handleBookingSubmit} 
+                className="flex-1 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
+              >
                 Confirm Seat & Submit
               </Button>
-              <Button variant="outline" onClick={() => setShowBookingModal(false)} className="border-slate-600 text-white hover:bg-slate-800">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowBookingModal(false)} 
+                className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
+              >
                 Cancel
               </Button>
             </div>
