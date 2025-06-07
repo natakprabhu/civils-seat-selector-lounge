@@ -26,7 +26,10 @@ import {
   Download,
   MapPin,
   Users,
-  ChevronDown
+  ChevronDown,
+  Activity,
+  TrendingUp,
+  Shield
 } from 'lucide-react';
 
 interface ClientDashboardProps {
@@ -50,7 +53,6 @@ interface BookingData {
   remainingDays?: number;
 }
 
-// Updated seat data to match the new layout
 const createSeatsData = () => {
   const seats = [];
   
@@ -228,25 +230,25 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header with User Dropdown */}
-      <div className="bg-card shadow-sm border-b border-border">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
+      {/* Header with Dark Theme */}
+      <div className="header-gradient shadow-2xl">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25 border border-cyan-400/30">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
                 <span className="text-white font-bold text-lg">CL</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Student Dashboard</h1>
-                <p className="text-muted-foreground">Welcome back! Mobile: {userMobile}</p>
+                <h1 className="text-2xl font-bold text-white">Student Dashboard</h1>
+                <p className="text-slate-400">Welcome back! Mobile: {userMobile}</p>
               </div>
             </div>
             <div className="relative">
               <Button 
                 variant="outline" 
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
-                className="border-cyan-400/30 hover:border-cyan-400/60 hover:bg-cyan-50/50"
+                className="border-slate-600 bg-slate-800/50 hover:bg-slate-700/50 text-white hover:border-slate-500"
               >
                 <User className="w-4 h-4 mr-2" />
                 Profile
@@ -254,15 +256,15 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               </Button>
               
               {showUserDropdown && (
-                <div className="absolute right-0 mt-2 w-64 bg-card rounded-lg shadow-xl border border-cyan-400/30 shadow-cyan-500/10 z-50">
-                  <div className="p-4 border-b border-cyan-400/20">
-                    <p className="font-semibold">{userBooking.name}</p>
-                    <p className="text-sm text-muted-foreground">{userBooking.email}</p>
+                <div className="absolute right-0 mt-2 w-64 bg-slate-900/95 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700/50 z-50">
+                  <div className="p-4 border-b border-slate-700/50">
+                    <p className="font-semibold text-white">{userBooking.name}</p>
+                    <p className="text-sm text-slate-400">{userBooking.email}</p>
                   </div>
                   <div className="p-2">
                     <Button 
                       variant="ghost" 
-                      className="w-full justify-start hover:bg-cyan-50/50" 
+                      className="w-full justify-start text-white hover:bg-slate-800/50" 
                       onClick={() => {
                         setCurrentView('edit-profile');
                         setShowUserDropdown(false);
@@ -273,7 +275,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                     </Button>
                     <Button 
                       variant="ghost" 
-                      className="w-full justify-start hover:bg-cyan-50/50" 
+                      className="w-full justify-start text-white hover:bg-slate-800/50" 
                       onClick={() => {
                         setCurrentView('transactions');
                         setShowUserDropdown(false);
@@ -282,11 +284,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                       <History className="w-4 h-4 mr-2" />
                       Payment History
                     </Button>
-                    <Button variant="ghost" className="w-full justify-start hover:bg-cyan-50/50">
+                    <Button variant="ghost" className="w-full justify-start text-white hover:bg-slate-800/50">
                       <MapPin className="w-4 h-4 mr-2" />
                       My Booking
                     </Button>
-                    <Button variant="ghost" className="w-full justify-start hover:bg-cyan-50/50" onClick={onLogout}>
+                    <Button variant="ghost" className="w-full justify-start text-white hover:bg-slate-800/50" onClick={onLogout}>
                       <LogOut className="w-4 h-4 mr-2" />
                       Logout
                     </Button>
@@ -298,114 +300,118 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Section 1: Seat Statistics - More Condensed */}
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        {/* Section 1: Condensed Stats Cards */}
         <div className="grid md:grid-cols-3 gap-4">
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-cyan-400/30 shadow-cyan-500/10">
-            <CardContent className="p-4 h-24 flex items-center justify-between">
+          <Card className="stat-card">
+            <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Total Seats</p>
-                <p className="text-2xl font-bold text-foreground">{totalSeats}</p>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Seats</p>
+                <p className="text-2xl font-bold text-white">{totalSeats}</p>
               </div>
-              <Users className="w-8 h-8 text-cyan-500" />
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-400" />
+              </div>
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-emerald-400/30 shadow-emerald-500/10">
-            <CardContent className="p-4 h-24 flex items-center justify-between">
+          <Card className="stat-card">
+            <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Available</p>
-                <p className="text-2xl font-bold text-foreground">{availableSeats}</p>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Available</p>
+                <p className="text-2xl font-bold text-white">{availableSeats}</p>
               </div>
-              <Check className="w-8 h-8 text-emerald-500" />
+              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500/20 to-green-500/20 rounded-lg flex items-center justify-center">
+                <Check className="w-6 h-6 text-emerald-400" />
+              </div>
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-amber-400/30 shadow-amber-500/10">
-            <CardContent className="p-4 h-24 flex items-center justify-between">
+          <Card className="stat-card">
+            <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">On Hold</p>
-                <p className="text-2xl font-bold text-foreground">{onHoldSeats}</p>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">On Hold</p>
+                <p className="text-2xl font-bold text-white">{onHoldSeats}</p>
               </div>
-              <Clock className="w-8 h-8 text-amber-500" />
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-500/20 to-yellow-500/20 rounded-lg flex items-center justify-center">
+                <Clock className="w-6 h-6 text-amber-400" />
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Section 2: Status Cards - More Condensed */}
+        {/* Section 2: Status Cards - Same Height */}
         <div className="grid md:grid-cols-4 gap-4">
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-purple-400/30 shadow-purple-500/10">
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Current Status</p>
-                <Badge 
-                  variant={
-                    userBooking.status === 'approved' ? 'default' : 
-                    userBooking.status === 'pending' ? 'secondary' : 'destructive'
-                  }
-                  className="mb-2"
-                >
-                  {userBooking.status === 'not_applied' ? 'Not Applied' :
-                   userBooking.status === 'pending' ? 'Pending' : 'Approved'}
-                </Badge>
-              </div>
+          <Card className="dashboard-card h-32">
+            <CardContent className="p-4 flex flex-col justify-center items-center text-center h-full">
+              <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Current Status</p>
+              <Badge 
+                variant={
+                  userBooking.status === 'approved' ? 'default' : 
+                  userBooking.status === 'pending' ? 'secondary' : 'destructive'
+                }
+                className="mb-2"
+              >
+                {userBooking.status === 'not_applied' ? 'Not Applied' :
+                 userBooking.status === 'pending' ? 'Pending' : 'Approved'}
+              </Badge>
+              <Activity className="w-5 h-5 text-slate-500" />
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-blue-400/30 shadow-blue-500/10">
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Allocated Seat</p>
-                {userBooking.status === 'approved' ? (
-                  <div>
-                    <p className="text-lg font-bold text-foreground">{userBooking.seatNumber}</p>
-                    <p className="text-xs text-muted-foreground mb-2">Valid till: {userBooking.validTill}</p>
-                    <Button size="sm" variant="outline" onClick={handleRequestSeatChange} className="border-blue-400/30">
-                      Request Change
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Not Assigned</p>
-                )}
-              </div>
+          <Card className="dashboard-card h-32">
+            <CardContent className="p-4 flex flex-col justify-center text-center h-full">
+              <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Allocated Seat</p>
+              {userBooking.status === 'approved' ? (
+                <div>
+                  <p className="text-lg font-bold text-white mb-1">{userBooking.seatNumber}</p>
+                  <p className="text-xs text-slate-400 mb-2">Valid till: {userBooking.validTill}</p>
+                  <Button size="sm" variant="outline" onClick={handleRequestSeatChange} className="border-slate-600 text-white hover:bg-slate-800">
+                    Request Change
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-400 mb-2">Not Assigned</p>
+                  <MapPin className="w-5 h-5 text-slate-500 mx-auto" />
+                </>
+              )}
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-rose-400/30 shadow-rose-500/10">
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Days Remaining</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {userBooking.remainingDays || 0}
-                </p>
-              </div>
+          <Card className="dashboard-card h-32">
+            <CardContent className="p-4 flex flex-col justify-center items-center text-center h-full">
+              <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Days Remaining</p>
+              <p className="text-2xl font-bold text-white mb-1">
+                {userBooking.remainingDays || 0}
+              </p>
+              <TrendingUp className="w-5 h-5 text-slate-500" />
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-indigo-400/30 shadow-indigo-500/10">
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Payment History</p>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => setCurrentView('transactions')}
-                  className="border-indigo-400/30"
-                >
-                  <History className="w-4 h-4 mr-1" />
-                  View History
-                </Button>
-              </div>
+          <Card className="dashboard-card h-32">
+            <CardContent className="p-4 flex flex-col justify-center items-center text-center h-full">
+              <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Payment History</p>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setCurrentView('transactions')}
+                className="border-slate-600 text-white hover:bg-slate-800 mb-2"
+              >
+                <History className="w-4 h-4 mr-1" />
+                View History
+              </Button>
+              <Shield className="w-5 h-5 text-slate-500" />
             </CardContent>
           </Card>
         </div>
 
         {/* Section 3: Booking Details */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-cyan-400/30 shadow-cyan-500/10">
-          <CardHeader className="border-b border-cyan-400/20 bg-gradient-to-r from-cyan-50/50 to-blue-50/50">
-            <CardTitle className="text-xl font-bold text-foreground flex items-center justify-between">
+        <Card className="dashboard-card">
+          <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+            <CardTitle className="text-xl font-bold text-white flex items-center justify-between">
               Booking Details
-              <Button size="sm" variant="outline" onClick={() => setIsEditing(!isEditing)} className="border-cyan-400/30">
+              <Button size="sm" variant="outline" onClick={() => setIsEditing(!isEditing)} className="border-slate-600 text-white hover:bg-slate-800">
                 <Edit className="w-4 h-4 mr-1" />
                 {isEditing ? 'Save' : 'Edit'}
               </Button>
@@ -414,48 +420,56 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           <CardContent className="p-6">
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Name</p>
+                <p className="text-sm text-slate-400 mb-1">Name</p>
                 {isEditing ? (
-                  <Input value={userBooking.name} onChange={(e) => setUserBooking({...userBooking, name: e.target.value})} />
+                  <Input 
+                    value={userBooking.name} 
+                    onChange={(e) => setUserBooking({...userBooking, name: e.target.value})} 
+                    className="bg-slate-800 border-slate-600 text-white"
+                  />
                 ) : (
-                  <p className="font-semibold text-foreground">{userBooking.name}</p>
+                  <p className="font-semibold text-white">{userBooking.name}</p>
                 )}
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Contact</p>
-                <p className="text-sm text-foreground">{userBooking.mobile}</p>
-                <p className="text-xs text-muted-foreground">(Non-editable)</p>
+                <p className="text-sm text-slate-400 mb-1">Contact</p>
+                <p className="text-sm text-white">{userBooking.mobile}</p>
+                <p className="text-xs text-slate-500">(Non-editable)</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Email</p>
+                <p className="text-sm text-slate-400 mb-1">Email</p>
                 {isEditing ? (
-                  <Input value={userBooking.email} onChange={(e) => setUserBooking({...userBooking, email: e.target.value})} />
+                  <Input 
+                    value={userBooking.email} 
+                    onChange={(e) => setUserBooking({...userBooking, email: e.target.value})} 
+                    className="bg-slate-800 border-slate-600 text-white"
+                  />
                 ) : (
-                  <p className="text-sm text-foreground">{userBooking.email}</p>
+                  <p className="text-sm text-white">{userBooking.email}</p>
                 )}
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Seat ID</p>
-                <p className="font-semibold text-foreground">{userBooking.seatNumber}</p>
+                <p className="text-sm text-slate-400 mb-1">Seat ID</p>
+                <p className="font-semibold text-white">{userBooking.seatNumber}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Duration</p>
-                <p className="text-sm text-foreground">{userBooking.duration} months</p>
+                <p className="text-sm text-slate-400 mb-1">Duration</p>
+                <p className="text-sm text-white">{userBooking.duration} months</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Payment Info</p>
+                <p className="text-sm text-slate-400 mb-1">Payment Info</p>
                 <div className="flex items-center gap-1 mb-1">
-                  <IndianRupee className="w-3 h-3 text-foreground" />
-                  <span className="font-semibold text-foreground">{userBooking.paidAmount}</span>
+                  <IndianRupee className="w-3 h-3 text-white" />
+                  <span className="font-semibold text-white">{userBooking.paidAmount}</span>
                 </div>
                 <Badge variant={userBooking.paymentStatus === 'approved' ? 'default' : 'secondary'}>
                   {userBooking.paymentStatus === 'approved' ? 'Paid' : 'Pending'}
                 </Badge>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Actions</p>
+                <p className="text-sm text-slate-400 mb-1">Actions</p>
                 {userBooking.status === 'approved' && userBooking.paymentStatus === 'approved' && (
-                  <Button size="sm" variant="outline" onClick={handleDownloadReceipt}>
+                  <Button size="sm" variant="outline" onClick={handleDownloadReceipt} className="border-slate-600 text-white hover:bg-slate-800">
                     <Download className="w-3 h-3 mr-1" />
                     Receipt
                   </Button>
@@ -466,9 +480,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         </Card>
 
         {/* Section 4: Live Seat Map */}
-        <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-emerald-400/30 shadow-emerald-500/10">
-          <CardHeader className="border-b border-emerald-400/20 bg-gradient-to-r from-emerald-50/50 to-green-50/50">
-            <CardTitle className="text-xl font-bold text-foreground">Live Seat Map</CardTitle>
+        <Card className="dashboard-card">
+          <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+            <CardTitle className="text-xl font-bold text-white">Live Seat Map</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <SeatSelection 
@@ -481,46 +495,46 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         </Card>
       </div>
 
-      {/* Booking Request Modal */}
+      {/* Booking Request Modal with Dark Theme */}
       <Dialog open={showBookingModal} onOpenChange={setShowBookingModal}>
-        <DialogContent className="max-w-md border border-cyan-400/30 shadow-cyan-500/20">
+        <DialogContent className="max-w-md bg-slate-900 border border-slate-700 text-white">
           <DialogHeader>
-            <DialogTitle className="text-cyan-700">Booking Request</DialogTitle>
+            <DialogTitle className="text-blue-400">Booking Request</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {/* Show seat image placeholder */}
-            <div className="w-full h-32 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg flex items-center justify-center border border-cyan-400/30">
-              <p className="text-cyan-600 font-medium">Seat {bookingFormData.seatId} Image</p>
+            <div className="w-full h-32 bg-gradient-to-br from-slate-800 to-slate-700 rounded-lg flex items-center justify-center border border-slate-600">
+              <p className="text-blue-400 font-medium">Seat {bookingFormData.seatId} Image</p>
             </div>
             
             <div>
-              <label className="text-sm font-medium text-foreground">Name</label>
+              <label className="text-sm font-medium text-slate-300">Name</label>
               <Input
                 value={bookingFormData.name}
                 onChange={(e) => setBookingFormData({...bookingFormData, name: e.target.value})}
                 placeholder="Enter your full name"
-                className="border-cyan-400/30 focus:border-cyan-500"
+                className="bg-slate-800 border-slate-600 text-white"
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Email</label>
+              <label className="text-sm font-medium text-slate-300">Email</label>
               <Input
                 type="email"
                 value={bookingFormData.email}
                 onChange={(e) => setBookingFormData({...bookingFormData, email: e.target.value})}
                 placeholder="Enter your email"
-                className="border-cyan-400/30 focus:border-cyan-500"
+                className="bg-slate-800 border-slate-600 text-white"
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Duration</label>
+              <label className="text-sm font-medium text-slate-300">Duration</label>
               <Select value={bookingFormData.duration} onValueChange={(value) => setBookingFormData({...bookingFormData, duration: value})}>
-                <SelectTrigger className="border-cyan-400/30 focus:border-cyan-500">
+                <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
                   <SelectValue placeholder="Select duration" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-slate-800 border-slate-600">
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                    <SelectItem key={month} value={month.toString()}>
+                    <SelectItem key={month} value={month.toString()} className="text-white hover:bg-slate-700">
                       {month} Month{month > 1 ? 's' : ''} - ₹{month * 2500}
                     </SelectItem>
                   ))}
@@ -528,26 +542,26 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Selected Seat</label>
+              <label className="text-sm font-medium text-slate-300">Selected Seat</label>
               <Input
                 value={`Seat ${bookingFormData.seatId}`}
                 readOnly
-                className="bg-muted border-cyan-400/30"
+                className="bg-slate-700 border-slate-600 text-white"
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Mobile (Locked)</label>
+              <label className="text-sm font-medium text-slate-300">Mobile (Locked)</label>
               <Input
                 value={userMobile}
                 readOnly
-                className="bg-muted border-cyan-400/30"
+                className="bg-slate-700 border-slate-600 text-white"
               />
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleBookingSubmit} className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700">
+              <Button onClick={handleBookingSubmit} className="flex-1 button-primary">
                 Confirm Seat & Submit
               </Button>
-              <Button variant="outline" onClick={() => setShowBookingModal(false)} className="border-cyan-400/30">
+              <Button variant="outline" onClick={() => setShowBookingModal(false)} className="border-slate-600 text-white hover:bg-slate-800">
                 Cancel
               </Button>
             </div>
