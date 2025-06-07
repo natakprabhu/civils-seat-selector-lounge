@@ -234,8 +234,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-primary-foreground font-bold text-lg">CL</span>
+              <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25 border border-cyan-400/30">
+                <span className="text-white font-bold text-lg">CL</span>
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Student Dashboard</h1>
@@ -246,7 +246,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               <Button 
                 variant="outline" 
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
-                className="border-border"
+                className="border-cyan-400/30 hover:border-cyan-400/60 hover:bg-cyan-50/50"
               >
                 <User className="w-4 h-4 mr-2" />
                 Profile
@@ -254,15 +254,15 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               </Button>
               
               {showUserDropdown && (
-                <div className="absolute right-0 mt-2 w-64 bg-card rounded-lg shadow-lg border border-border z-50">
-                  <div className="p-4 border-b border-border">
+                <div className="absolute right-0 mt-2 w-64 bg-card rounded-lg shadow-xl border border-cyan-400/30 shadow-cyan-500/10 z-50">
+                  <div className="p-4 border-b border-cyan-400/20">
                     <p className="font-semibold">{userBooking.name}</p>
                     <p className="text-sm text-muted-foreground">{userBooking.email}</p>
                   </div>
                   <div className="p-2">
                     <Button 
                       variant="ghost" 
-                      className="w-full justify-start" 
+                      className="w-full justify-start hover:bg-cyan-50/50" 
                       onClick={() => {
                         setCurrentView('edit-profile');
                         setShowUserDropdown(false);
@@ -273,7 +273,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                     </Button>
                     <Button 
                       variant="ghost" 
-                      className="w-full justify-start" 
+                      className="w-full justify-start hover:bg-cyan-50/50" 
                       onClick={() => {
                         setCurrentView('transactions');
                         setShowUserDropdown(false);
@@ -282,11 +282,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                       <History className="w-4 h-4 mr-2" />
                       Payment History
                     </Button>
-                    <Button variant="ghost" className="w-full justify-start">
+                    <Button variant="ghost" className="w-full justify-start hover:bg-cyan-50/50">
                       <MapPin className="w-4 h-4 mr-2" />
                       My Booking
                     </Button>
-                    <Button variant="ghost" className="w-full justify-start" onClick={onLogout}>
+                    <Button variant="ghost" className="w-full justify-start hover:bg-cyan-50/50" onClick={onLogout}>
                       <LogOut className="w-4 h-4 mr-2" />
                       Logout
                     </Button>
@@ -299,45 +299,45 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Section 1: Seat Statistics */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card className="border-0 shadow-lg bg-card">
-            <CardContent className="p-6 h-32 flex items-center justify-between">
+        {/* Section 1: Seat Statistics - More Condensed */}
+        <div className="grid md:grid-cols-3 gap-4">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-cyan-400/30 shadow-cyan-500/10">
+            <CardContent className="p-4 h-24 flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Seats</p>
-                <p className="text-3xl font-bold text-foreground">{totalSeats}</p>
+                <p className="text-xs font-medium text-muted-foreground">Total Seats</p>
+                <p className="text-2xl font-bold text-foreground">{totalSeats}</p>
               </div>
-              <Users className="w-10 h-10 text-muted-foreground" />
+              <Users className="w-8 h-8 text-cyan-500" />
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg bg-card">
-            <CardContent className="p-6 h-32 flex items-center justify-between">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-emerald-400/30 shadow-emerald-500/10">
+            <CardContent className="p-4 h-24 flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Available</p>
-                <p className="text-3xl font-bold text-foreground">{availableSeats}</p>
+                <p className="text-xs font-medium text-muted-foreground">Available</p>
+                <p className="text-2xl font-bold text-foreground">{availableSeats}</p>
               </div>
-              <Check className="w-10 h-10 text-muted-foreground" />
+              <Check className="w-8 h-8 text-emerald-500" />
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg bg-card">
-            <CardContent className="p-6 h-32 flex items-center justify-between">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-amber-400/30 shadow-amber-500/10">
+            <CardContent className="p-4 h-24 flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">On Hold</p>
-                <p className="text-3xl font-bold text-foreground">{onHoldSeats}</p>
+                <p className="text-xs font-medium text-muted-foreground">On Hold</p>
+                <p className="text-2xl font-bold text-foreground">{onHoldSeats}</p>
               </div>
-              <Clock className="w-10 h-10 text-muted-foreground" />
+              <Clock className="w-8 h-8 text-amber-500" />
             </CardContent>
           </Card>
         </div>
 
-        {/* Section 2: Status Cards */}
-        <div className="grid md:grid-cols-4 gap-6">
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
+        {/* Section 2: Status Cards - More Condensed */}
+        <div className="grid md:grid-cols-4 gap-4">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-purple-400/30 shadow-purple-500/10">
+            <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-sm font-medium text-muted-foreground mb-2">Current Status</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Current Status</p>
                 <Badge 
                   variant={
                     userBooking.status === 'approved' ? 'default' : 
@@ -352,15 +352,15 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-blue-400/30 shadow-blue-500/10">
+            <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-sm font-medium text-muted-foreground mb-2">Allocated Seat</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Allocated Seat</p>
                 {userBooking.status === 'approved' ? (
                   <div>
                     <p className="text-lg font-bold text-foreground">{userBooking.seatNumber}</p>
                     <p className="text-xs text-muted-foreground mb-2">Valid till: {userBooking.validTill}</p>
-                    <Button size="sm" variant="outline" onClick={handleRequestSeatChange}>
+                    <Button size="sm" variant="outline" onClick={handleRequestSeatChange} className="border-blue-400/30">
                       Request Change
                     </Button>
                   </div>
@@ -371,10 +371,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-rose-400/30 shadow-rose-500/10">
+            <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-sm font-medium text-muted-foreground mb-2">Days Remaining</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Days Remaining</p>
                 <p className="text-2xl font-bold text-foreground">
                   {userBooking.remainingDays || 0}
                 </p>
@@ -382,14 +382,15 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-indigo-400/30 shadow-indigo-500/10">
+            <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-sm font-medium text-muted-foreground mb-2">Payment History</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Payment History</p>
                 <Button 
                   size="sm" 
                   variant="outline" 
                   onClick={() => setCurrentView('transactions')}
+                  className="border-indigo-400/30"
                 >
                   <History className="w-4 h-4 mr-1" />
                   View History
@@ -400,11 +401,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         </div>
 
         {/* Section 3: Booking Details */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="border-b border-border bg-muted/50">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-cyan-400/30 shadow-cyan-500/10">
+          <CardHeader className="border-b border-cyan-400/20 bg-gradient-to-r from-cyan-50/50 to-blue-50/50">
             <CardTitle className="text-xl font-bold text-foreground flex items-center justify-between">
               Booking Details
-              <Button size="sm" variant="outline" onClick={() => setIsEditing(!isEditing)}>
+              <Button size="sm" variant="outline" onClick={() => setIsEditing(!isEditing)} className="border-cyan-400/30">
                 <Edit className="w-4 h-4 mr-1" />
                 {isEditing ? 'Save' : 'Edit'}
               </Button>
@@ -465,8 +466,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         </Card>
 
         {/* Section 4: Live Seat Map */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="border-b border-border bg-muted/50">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80 border border-emerald-400/30 shadow-emerald-500/10">
+          <CardHeader className="border-b border-emerald-400/20 bg-gradient-to-r from-emerald-50/50 to-green-50/50">
             <CardTitle className="text-xl font-bold text-foreground">Live Seat Map</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
@@ -482,14 +483,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
       {/* Booking Request Modal */}
       <Dialog open={showBookingModal} onOpenChange={setShowBookingModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md border border-cyan-400/30 shadow-cyan-500/20">
           <DialogHeader>
-            <DialogTitle>Booking Request</DialogTitle>
+            <DialogTitle className="text-cyan-700">Booking Request</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {/* Show seat image placeholder */}
-            <div className="w-full h-32 bg-muted rounded-lg flex items-center justify-center">
-              <p className="text-muted-foreground">Seat {bookingFormData.seatId} Image</p>
+            <div className="w-full h-32 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg flex items-center justify-center border border-cyan-400/30">
+              <p className="text-cyan-600 font-medium">Seat {bookingFormData.seatId} Image</p>
             </div>
             
             <div>
@@ -498,6 +499,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                 value={bookingFormData.name}
                 onChange={(e) => setBookingFormData({...bookingFormData, name: e.target.value})}
                 placeholder="Enter your full name"
+                className="border-cyan-400/30 focus:border-cyan-500"
               />
             </div>
             <div>
@@ -507,12 +509,13 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                 value={bookingFormData.email}
                 onChange={(e) => setBookingFormData({...bookingFormData, email: e.target.value})}
                 placeholder="Enter your email"
+                className="border-cyan-400/30 focus:border-cyan-500"
               />
             </div>
             <div>
               <label className="text-sm font-medium text-foreground">Duration</label>
               <Select value={bookingFormData.duration} onValueChange={(value) => setBookingFormData({...bookingFormData, duration: value})}>
-                <SelectTrigger>
+                <SelectTrigger className="border-cyan-400/30 focus:border-cyan-500">
                   <SelectValue placeholder="Select duration" />
                 </SelectTrigger>
                 <SelectContent>
@@ -529,7 +532,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               <Input
                 value={`Seat ${bookingFormData.seatId}`}
                 readOnly
-                className="bg-muted"
+                className="bg-muted border-cyan-400/30"
               />
             </div>
             <div>
@@ -537,14 +540,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               <Input
                 value={userMobile}
                 readOnly
-                className="bg-muted"
+                className="bg-muted border-cyan-400/30"
               />
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleBookingSubmit} className="flex-1">
+              <Button onClick={handleBookingSubmit} className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700">
                 Confirm Seat & Submit
               </Button>
-              <Button variant="outline" onClick={() => setShowBookingModal(false)}>
+              <Button variant="outline" onClick={() => setShowBookingModal(false)} className="border-cyan-400/30">
                 Cancel
               </Button>
             </div>
