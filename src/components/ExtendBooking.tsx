@@ -10,8 +10,8 @@ import { ArrowLeft, Calendar, IndianRupee, Clock } from 'lucide-react';
 interface ExtendBookingProps {
   currentBooking: {
     seatNumber: string;
-    validTill: string;
-    paidAmount: number;
+    validTill?: string;
+    paidAmount?: number;
   };
   onBack: () => void;
   onExtend: (months: number, amount: number) => void;
@@ -93,13 +93,13 @@ const ExtendBooking: React.FC<ExtendBookingProps> = ({
                 </div>
                 <div>
                   <p className="text-sm text-slate-400 mb-1">Current End Date</p>
-                  <p className="text-lg text-white">{currentBooking.validTill}</p>
+                  <p className="text-lg text-white">{currentBooking.validTill || 'Not specified'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-400 mb-1">Last Payment</p>
                   <div className="flex items-center gap-1">
                     <IndianRupee className="w-4 h-4 text-green-400" />
-                    <span className="text-lg font-bold text-green-400">{currentBooking.paidAmount}</span>
+                    <span className="text-lg font-bold text-green-400">{currentBooking.paidAmount || 0}</span>
                   </div>
                 </div>
               </div>
