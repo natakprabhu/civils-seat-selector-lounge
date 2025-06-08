@@ -52,6 +52,8 @@ interface BookingData {
   paymentMethod?: 'cash' | 'online';
   validTill?: string;
   remainingDays?: number;
+  startDate?: string;
+  planDetails?: string;
 }
 
 const createSeatsData = () => {
@@ -103,14 +105,14 @@ const createSeatsData = () => {
 };
 
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'seat-change' | 'transactions' | 'edit-profile' | 'booking-success'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'seat-change' | 'transactions' | 'edit-profile' | 'booking-success' | 'my-booking'>('dashboard');
   const [selectedSeat, setSelectedSeat] = useState<string>('');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [seats] = useState(() => createSeatsData());
   const [isEditing, setIsEditing] = useState(false);
 
-  // Mock user data
+  // Mock user data with enhanced booking details
   const [userBooking, setUserBooking] = useState<BookingData>({
     seatNumber: 'A5',
     name: 'Rahul Sharma',
@@ -124,17 +126,19 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     paidOn: '2024-01-16',
     paymentMethod: 'online',
     validTill: '2024-07-16',
-    remainingDays: 45
+    remainingDays: 45,
+    startDate: '2024-01-16',
+    planDetails: '6 Month Plan'
   });
 
-  // Mock recent transactions data
+  // Mock recent transactions data (last 3 transactions only)
   const recentTransactions = [
     {
       id: 1,
       date: '2024-01-16',
       type: 'Seat Booking',
       amount: 15000,
-      status: 'Completed',
+      status: 'Paid',
       description: 'Seat A5 - 6 months'
     },
     {
@@ -142,7 +146,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       date: '2024-01-10',
       type: 'Seat Change',
       amount: 0,
-      status: 'Pending',
+      status: 'Waiting for confirmation',
       description: 'Change from A3 to A5'
     },
     {
@@ -150,10 +154,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       date: '2023-12-15',
       type: 'Extension',
       amount: 7500,
-      status: 'Completed',
+      status: 'Paid',
       description: 'Extended 3 months'
     }
-  ];
+  ].slice(0, 3); // Show only last 3 transactions
 
   const [bookingFormData, setBookingFormData] = useState({
     name: '',
@@ -258,6 +262,64 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     );
   }
 
+  if (currentView === 'my-booking') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-4 mb-6">
+            <Button 
+              onClick={() => setCurrentView('dashboard')} 
+              className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
+            >
+              ← Back to Dashboard
+            </Button>
+            <h1 className="text-2xl font-bold text-white">My Booking Details</h1>
+          </div>
+          
+          <Card className="dashboard-card">
+            <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+              <CardTitle className="text-xl font-bold text-white">Current Booking</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-slate-400 mb-1">Seat Number</p>
+                    <p className="text-xl font-bold text-white">{userBooking.seatNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400 mb-1">Plan</p>
+                    <p className="text-lg text-white">{userBooking.planDetails}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400 mb-1">Start Date</p>
+                    <p className="text-lg text-white">{userBooking.startDate}</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-slate-400 mb-1">Valid Till</p>
+                    <p className="text-lg text-white">{userBooking.validTill}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400 mb-1">Days Remaining</p>
+                    <p className="text-xl font-bold text-green-400">{userBooking.remainingDays}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400 mb-1">Status</p>
+                    <Badge variant="default" className="text-sm">
+                      {userBooking.status === 'approved' ? 'Active' : userBooking.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
       {/* Header with Dark Theme */}
@@ -313,7 +375,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                       <History className="w-4 h-4 mr-2" />
                       Payment History
                     </Button>
-                    <Button variant="ghost" className="w-full justify-start text-white hover:bg-slate-800/50">
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start text-white hover:bg-slate-800/50"
+                      onClick={() => {
+                        setCurrentView('my-booking');
+                        setShowUserDropdown(false);
+                      }}
+                    >
                       <MapPin className="w-4 h-4 mr-2" />
                       My Booking
                     </Button>
@@ -369,9 +438,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </Card>
         </div>
 
-        {/* Section 2: Status Cards - Same Height */}
+        {/* Section 2: Status Cards - Enhanced with start date and plan details */}
         <div className="grid md:grid-cols-4 gap-4">
-          <Card className="dashboard-card h-32">
+          <Card className="dashboard-card h-40">
             <CardContent className="p-4 flex flex-col justify-center items-center text-center h-full">
               <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Current Status</p>
               <Badge 
@@ -382,13 +451,19 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                 className="mb-2"
               >
                 {userBooking.status === 'not_applied' ? 'Not Applied' :
-                 userBooking.status === 'pending' ? 'Pending' : 'Approved'}
+                 userBooking.status === 'pending' ? 'Pending' : 'Active'}
               </Badge>
-              <Activity className="w-5 h-5 text-slate-500" />
+              {userBooking.status === 'approved' && (
+                <div className="text-center">
+                  <p className="text-xs text-slate-400">Started: {userBooking.startDate}</p>
+                  <p className="text-xs text-cyan-300 font-medium">{userBooking.planDetails}</p>
+                </div>
+              )}
+              <Activity className="w-5 h-5 text-slate-500 mt-2" />
             </CardContent>
           </Card>
           
-          <Card className="dashboard-card h-32">
+          <Card className="dashboard-card h-40">
             <CardContent className="p-4 flex flex-col justify-center text-center h-full">
               <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Allocated Seat</p>
               {userBooking.status === 'approved' ? (
@@ -412,7 +487,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             </CardContent>
           </Card>
           
-          <Card className="dashboard-card h-32">
+          <Card className="dashboard-card h-40">
             <CardContent className="p-4 flex flex-col justify-center items-center text-center h-full">
               <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Days Remaining</p>
               <p className="text-2xl font-bold text-white mb-1">
@@ -422,33 +497,35 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             </CardContent>
           </Card>
           
-          <Card className="dashboard-card h-32">
+          <Card className="dashboard-card h-40">
             <CardContent className="p-4 flex flex-col justify-center items-center text-center h-full">
-              <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Payment History</p>
-              <Button 
-                size="sm" 
-                onClick={() => setCurrentView('transactions')}
-                className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600 mb-2"
+              <p className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Last Payment</p>
+              <div className="flex items-center gap-1 mb-1">
+                <IndianRupee className="w-4 h-4 text-green-400" />
+                <span className="text-lg font-bold text-green-400">{userBooking.paidAmount || 0}</span>
+              </div>
+              <Badge 
+                variant={userBooking.paymentStatus === 'approved' ? 'default' : 'secondary'}
+                className="text-xs mb-2"
               >
-                <History className="w-4 h-4 mr-1" />
-                View History
-              </Button>
+                {userBooking.paymentStatus === 'approved' ? 'Paid' : 'Waiting for confirmation'}
+              </Badge>
               <Shield className="w-5 h-5 text-slate-500" />
             </CardContent>
           </Card>
         </div>
 
-        {/* Section 3: Recent Transactions */}
+        {/* Section 3: Recent Transactions - Last booking details only */}
         <Card className="dashboard-card">
           <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
             <CardTitle className="text-xl font-bold text-white flex items-center justify-between">
-              Recent Transactions
+              My Booking Details
               <Button 
                 size="sm" 
                 onClick={() => setCurrentView('transactions')} 
                 className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
               >
-                All Bookings
+                View All Transactions
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </CardTitle>
@@ -472,7 +549,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                       <span className="font-semibold text-white">{transaction.amount}</span>
                     </div>
                     <Badge 
-                      variant={transaction.status === 'Completed' ? 'default' : 'secondary'}
+                      variant={transaction.status === 'Paid' ? 'default' : 'secondary'}
                       className="text-xs"
                     >
                       {transaction.status}

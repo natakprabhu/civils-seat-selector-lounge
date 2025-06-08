@@ -187,21 +187,25 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-slate-200">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
+      {/* Header with Dark Theme */}
+      <div className="header-gradient shadow-2xl">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-gradient-to-r from-slate-700 to-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-black/50 border border-slate-600">
                 <span className="text-white font-bold text-lg">CL</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-800">Admin Dashboard</h1>
-                <p className="text-slate-600">Booking Management System</p>
+                <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+                <p className="text-slate-400">Booking Management System</p>
               </div>
             </div>
-            <Button variant="outline" onClick={onLogout} className="border-slate-300">
+            <Button 
+              variant="outline" 
+              onClick={onLogout} 
+              className="border-slate-600 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white hover:border-slate-500 shadow-lg shadow-black/50"
+            >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
@@ -211,94 +215,94 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Stats Cards */}
+        {/* Stats Cards with Dark Theme */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
+          <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">Total Requests</p>
-                  <p className="text-3xl font-bold text-blue-900">{stats.totalRequests}</p>
+                  <p className="text-sm font-medium text-slate-400">Total Requests</p>
+                  <p className="text-3xl font-bold text-white">{stats.totalRequests}</p>
                 </div>
-                <Users className="w-10 h-10 text-blue-600" />
+                <Users className="w-10 h-10 text-cyan-400" />
               </div>
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-yellow-100">
+          <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-yellow-700">Pending</p>
-                  <p className="text-3xl font-bold text-yellow-900">{stats.pendingRequests}</p>
+                  <p className="text-sm font-medium text-slate-400">Pending</p>
+                  <p className="text-3xl font-bold text-yellow-400">{stats.pendingRequests}</p>
                 </div>
-                <Clock className="w-10 h-10 text-yellow-600" />
+                <Clock className="w-10 h-10 text-yellow-400" />
               </div>
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100">
+          <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-700">Approved</p>
-                  <p className="text-3xl font-bold text-green-900">{stats.approvedBookings}</p>
+                  <p className="text-sm font-medium text-slate-400">Approved</p>
+                  <p className="text-3xl font-bold text-green-400">{stats.approvedBookings}</p>
                 </div>
-                <Check className="w-10 h-10 text-green-600" />
+                <Check className="w-10 h-10 text-green-400" />
               </div>
             </CardContent>
           </Card>
           
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100">
+          <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-700">Rejected</p>
-                  <p className="text-3xl font-bold text-red-900">{stats.rejectedRequests}</p>
+                  <p className="text-sm font-medium text-slate-400">Rejected</p>
+                  <p className="text-3xl font-bold text-red-400">{stats.rejectedRequests}</p>
                 </div>
-                <X className="w-10 h-10 text-red-600" />
+                <X className="w-10 h-10 text-red-400" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Booking Requests */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="border-b border-slate-200 bg-slate-50">
-            <CardTitle className="text-xl font-bold text-slate-800">Booking Requests Management</CardTitle>
+        {/* Booking Requests with Dark Theme */}
+        <Card className="dashboard-card">
+          <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+            <CardTitle className="text-xl font-bold text-white">Booking Requests Management</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="space-y-0">
               {bookingRequests.map((booking, index) => (
-                <div key={booking.id} className={`p-6 ${index !== bookingRequests.length - 1 ? 'border-b border-slate-100' : ''}`}>
+                <div key={booking.id} className={`p-6 ${index !== bookingRequests.length - 1 ? 'border-b border-slate-700/50' : ''}`}>
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="flex-1">
                       <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div>
-                          <p className="text-sm text-slate-600 mb-1">Name</p>
+                          <p className="text-sm text-slate-400 mb-1">Name</p>
                           {editingId === booking.id ? (
                             <Input
                               value={editData.name || ''}
                               onChange={(e) => setEditData({...editData, name: e.target.value})}
-                              className="h-8"
+                              className="h-8 bg-slate-800 border-slate-600 text-white"
                             />
                           ) : (
-                            <p className="font-semibold text-slate-800">{booking.name}</p>
+                            <p className="font-semibold text-white">{booking.name}</p>
                           )}
                         </div>
                         <div>
-                          <p className="text-sm text-slate-600 mb-1">Contact</p>
-                          <p className="text-sm text-slate-800">{booking.mobile}</p>
+                          <p className="text-sm text-slate-400 mb-1">Contact</p>
+                          <p className="text-sm text-white">{booking.mobile}</p>
                           <p className="text-xs text-slate-500">{booking.email}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-slate-600 mb-1">Seat & Duration</p>
-                          <p className="font-semibold text-slate-800">Seat {booking.seatNumber}</p>
+                          <p className="text-sm text-slate-400 mb-1">Seat & Duration</p>
+                          <p className="font-semibold text-white">Seat {booking.seatNumber}</p>
                           {editingId === booking.id ? (
                             <Input
                               value={editData.duration || ''}
                               onChange={(e) => setEditData({...editData, duration: e.target.value})}
-                              className="h-6 text-xs mt-1"
+                              className="h-6 text-xs mt-1 bg-slate-800 border-slate-600 text-white"
                               placeholder="months"
                             />
                           ) : (
@@ -306,36 +310,36 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                           )}
                         </div>
                         <div>
-                          <p className="text-sm text-slate-600 mb-1">Payment</p>
+                          <p className="text-sm text-slate-400 mb-1">Payment</p>
                           {paymentEditId === booking.id ? (
                             <div className="space-y-1">
                               <Input
                                 type="number"
                                 value={paymentData.amount}
                                 onChange={(e) => setPaymentData({...paymentData, amount: Number(e.target.value)})}
-                                className="h-6 text-xs"
+                                className="h-6 text-xs bg-slate-800 border-slate-600 text-white"
                                 placeholder="Amount"
                               />
                               <Select value={paymentData.method} onValueChange={(value: 'cash' | 'online') => setPaymentData({...paymentData, method: value})}>
-                                <SelectTrigger className="h-6 text-xs">
+                                <SelectTrigger className="h-6 text-xs bg-slate-800 border-slate-600 text-white">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="cash">Cash</SelectItem>
-                                  <SelectItem value="online">Online</SelectItem>
+                                <SelectContent className="bg-slate-800 border-slate-600">
+                                  <SelectItem value="cash" className="text-white">Cash</SelectItem>
+                                  <SelectItem value="online" className="text-white">Online</SelectItem>
                                 </SelectContent>
                               </Select>
                               <Input
                                 type="date"
                                 value={paymentData.date}
                                 onChange={(e) => setPaymentData({...paymentData, date: e.target.value})}
-                                className="h-6 text-xs"
+                                className="h-6 text-xs bg-slate-800 border-slate-600 text-white"
                               />
                               <Input
                                 type="number"
                                 value={paymentData.validityExtension}
                                 onChange={(e) => setPaymentData({...paymentData, validityExtension: Number(e.target.value)})}
-                                className="h-6 text-xs"
+                                className="h-6 text-xs bg-slate-800 border-slate-600 text-white"
                                 placeholder="Validity (months)"
                                 min="1"
                               />
@@ -343,8 +347,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                           ) : (
                             <div>
                               <div className="flex items-center gap-1">
-                                <IndianRupee className="w-3 h-3 text-green-600" />
-                                <span className="font-semibold text-green-600">{booking.paidAmount || 0}</span>
+                                <IndianRupee className="w-3 h-3 text-green-400" />
+                                <span className="font-semibold text-green-400">{booking.paidAmount || 0}</span>
                               </div>
                               {booking.paidOn && (
                                 <p className="text-xs text-slate-500">Paid on: {booking.paidOn}</p>
@@ -353,13 +357,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                                 <p className="text-xs text-slate-500 capitalize">{booking.paymentMethod}</p>
                               )}
                               {booking.validityExtendedBy && (
-                                <p className="text-xs text-blue-500">+{booking.validityExtendedBy} months</p>
+                                <p className="text-xs text-cyan-400">+{booking.validityExtendedBy} months</p>
                               )}
                             </div>
                           )}
                         </div>
                         <div>
-                          <p className="text-sm text-slate-600 mb-1">Status</p>
+                          <p className="text-sm text-slate-400 mb-1">Status</p>
                           <p className="text-xs text-slate-500">{formatDateTime(booking.submittedAt)}</p>
                           <Badge 
                             variant={
@@ -377,33 +381,61 @@ const AdminPage: React.FC<AdminPageProps> = ({ onLogout }) => {
                     <div className="flex flex-wrap gap-2">
                       {editingId === booking.id ? (
                         <>
-                          <Button size="sm" onClick={handleSaveEdit} className="bg-green-600 hover:bg-green-700">
+                          <Button 
+                            size="sm" 
+                            onClick={handleSaveEdit} 
+                            className="bg-green-600 hover:bg-green-700"
+                          >
                             <Save className="w-4 h-4 mr-1" />
                             Save
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => setEditingId(null)}
+                            className="border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
+                          >
                             <X className="w-4 h-4 mr-1" />
                             Cancel
                           </Button>
                         </>
                       ) : paymentEditId === booking.id ? (
                         <>
-                          <Button size="sm" onClick={handleSavePayment} className="bg-green-600 hover:bg-green-700">
+                          <Button 
+                            size="sm" 
+                            onClick={handleSavePayment} 
+                            className="bg-green-600 hover:bg-green-700"
+                          >
                             <Save className="w-4 h-4 mr-1" />
                             Save Payment
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => setPaymentEditId(null)}>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => setPaymentEditId(null)}
+                            className="border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
+                          >
                             <X className="w-4 h-4 mr-1" />
                             Cancel
                           </Button>
                         </>
                       ) : (
                         <>
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(booking)}>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleEdit(booking)}
+                            className="border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
+                          >
                             <Edit3 className="w-4 h-4 mr-1" />
                             Edit
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => handlePaymentEdit(booking)}>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handlePaymentEdit(booking)}
+                            className="border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
+                          >
                             <DollarSign className="w-4 h-4 mr-1" />
                             Payment
                           </Button>

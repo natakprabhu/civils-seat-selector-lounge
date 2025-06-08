@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -213,21 +212,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
+      {/* Header with Dark Theme */}
+      <div className="header-gradient shadow-2xl">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold">CL</span>
+              <div className="w-12 h-12 bg-gradient-to-r from-slate-700 to-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-black/50 border border-slate-600">
+                <span className="text-white font-bold text-lg">CL</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-blue-900">Civils Lounge - Admin</h1>
-                <p className="text-sm text-gray-600">Booking Management System</p>
+                <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+                <p className="text-slate-400">Booking Management System</p>
               </div>
             </div>
-            <Button variant="outline" onClick={onLogout}>
+            <Button 
+              variant="outline" 
+              onClick={onLogout}
+              className="border-slate-600 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white hover:border-slate-500 shadow-lg shadow-black/50"
+            >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
@@ -235,96 +238,96 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        {/* Section 1: Stats Cards */}
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Section 1: Stats Cards with Dark Theme */}
         <div className="grid md:grid-cols-4 gap-6">
-          <Card>
+          <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Requests</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalRequests}</p>
+                  <p className="text-sm font-medium text-slate-400">Total Requests</p>
+                  <p className="text-2xl font-bold text-white">{stats.totalRequests}</p>
                 </div>
-                <Users className="w-8 h-8 text-blue-600" />
+                <Users className="w-8 h-8 text-cyan-400" />
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Pending</p>
-                  <p className="text-2xl font-bold text-yellow-600">{stats.pendingRequests}</p>
+                  <p className="text-sm font-medium text-slate-400">Pending</p>
+                  <p className="text-2xl font-bold text-yellow-400">{stats.pendingRequests}</p>
                 </div>
-                <Clock className="w-8 h-8 text-yellow-600" />
+                <Clock className="w-8 h-8 text-yellow-400" />
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Approved</p>
-                  <p className="text-2xl font-bold text-green-600">{stats.approvedRequests}</p>
+                  <p className="text-sm font-medium text-slate-400">Approved</p>
+                  <p className="text-2xl font-bold text-green-400">{stats.approvedRequests}</p>
                 </div>
-                <CheckCircle className="w-8 h-8 text-green-600" />
+                <CheckCircle className="w-8 h-8 text-green-400" />
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Rejected</p>
-                  <p className="text-2xl font-bold text-red-600">{stats.rejectedRequests}</p>
+                  <p className="text-sm font-medium text-slate-400">Rejected</p>
+                  <p className="text-2xl font-bold text-red-400">{stats.rejectedRequests}</p>
                 </div>
-                <X className="w-8 h-8 text-red-600" />
+                <X className="w-8 h-8 text-red-400" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Section 2: Request Management Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Request Management</CardTitle>
+        {/* Section 2: Request Management Table with Dark Theme */}
+        <Card className="dashboard-card">
+          <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+            <CardTitle className="text-xl font-bold text-white">Request Management</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {bookingRequests.map((request) => (
-                <div key={request.id} className="border rounded-lg p-6 bg-white">
+          <CardContent className="p-0">
+            <div className="space-y-0">
+              {bookingRequests.map((request, index) => (
+                <div key={request.id} className={`p-6 ${index !== bookingRequests.length - 1 ? 'border-b border-slate-700/50' : ''}`}>
                   <div className="grid md:grid-cols-6 gap-4 items-center">
                     <div>
-                      <p className="text-sm text-gray-600">Name</p>
-                      <p className="font-semibold">{request.name}</p>
-                      <p className="text-sm text-gray-500">{request.email}</p>
+                      <p className="text-sm text-slate-400">Name</p>
+                      <p className="font-semibold text-white">{request.name}</p>
+                      <p className="text-sm text-slate-500">{request.email}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Seat & Duration</p>
-                      <p className="font-semibold">Seat {request.seatNumber}</p>
-                      <p className="text-sm text-gray-500">{request.duration} months</p>
+                      <p className="text-sm text-slate-400">Seat & Duration</p>
+                      <p className="font-semibold text-white">Seat {request.seatNumber}</p>
+                      <p className="text-sm text-slate-500">{request.duration} months</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Amount</p>
+                      <p className="text-sm text-slate-400">Amount</p>
                       <div className="flex items-center gap-1">
-                        <IndianRupee className="w-4 h-4 text-green-600" />
-                        <span className="font-semibold text-green-600">{request.amount}</span>
+                        <IndianRupee className="w-4 h-4 text-green-400" />
+                        <span className="font-semibold text-green-400">{request.amount}</span>
                       </div>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Payment Info</p>
+                      <p className="text-sm text-slate-400">Payment Info</p>
                       {request.paymentMode && (
-                        <p className="text-sm capitalize">{request.paymentMode}</p>
+                        <p className="text-sm text-white capitalize">{request.paymentMode}</p>
                       )}
                       {request.paymentDate && (
-                        <p className="text-xs text-gray-500">{request.paymentDate}</p>
+                        <p className="text-xs text-slate-500">{request.paymentDate}</p>
                       )}
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Screenshot</p>
+                      <p className="text-sm text-slate-400">Screenshot</p>
                       <div className="flex gap-2">
                         <input
                           type="file"
@@ -337,7 +340,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           id={`upload-${request.id}`}
                         />
                         <label htmlFor={`upload-${request.id}`}>
-                          <Button size="sm" variant="outline" asChild>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            asChild
+                            className="border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
+                          >
                             <span>
                               <Upload className="w-4 h-4 mr-1" />
                               Upload
@@ -345,14 +353,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           </Button>
                         </label>
                         {request.screenshot && (
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
+                          >
                             <FileImage className="w-4 h-4" />
                           </Button>
                         )}
                       </div>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Actions</p>
+                      <p className="text-sm text-slate-400">Actions</p>
                       <div className="flex gap-2">
                         <Badge 
                           variant={
@@ -389,55 +401,55 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           </CardContent>
         </Card>
 
-        {/* Section 3: User Management Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>User Management</CardTitle>
+        {/* Section 3: User Management Table with Dark Theme */}
+        <Card className="dashboard-card">
+          <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+            <CardTitle className="text-xl font-bold text-white">User Management</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {users.map((user) => (
-                <div key={user.id} className="border rounded-lg p-6 bg-white">
+          <CardContent className="p-0">
+            <div className="space-y-0">
+              {users.map((user, index) => (
+                <div key={user.id} className={`p-6 ${index !== users.length - 1 ? 'border-b border-slate-700/50' : ''}`}>
                   <div className="grid md:grid-cols-6 gap-4 items-center">
                     <div>
-                      <p className="text-sm text-gray-600">Name</p>
-                      <p className="font-semibold">{user.name}</p>
-                      <p className="text-sm text-gray-500">{user.email}</p>
+                      <p className="text-sm text-slate-400">Name</p>
+                      <p className="font-semibold text-white">{user.name}</p>
+                      <p className="text-sm text-slate-500">{user.email}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Seat</p>
-                      <p className="font-semibold">{user.seatNumber || 'Not Assigned'}</p>
+                      <p className="text-sm text-slate-400">Seat</p>
+                      <p className="font-semibold text-white">{user.seatNumber || 'Not Assigned'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Last Payment</p>
-                      <p className="text-sm">{user.lastPayment}</p>
+                      <p className="text-sm text-slate-400">Last Payment</p>
+                      <p className="text-sm text-white">{user.lastPayment}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Expiry</p>
-                      <p className="text-sm">{user.expiry}</p>
+                      <p className="text-sm text-slate-400">Expiry</p>
+                      <p className="text-sm text-white">{user.expiry}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Remaining Days</p>
-                      <p className={`font-semibold ${user.remainingDays < 30 ? 'text-red-600' : 'text-green-600'}`}>
+                      <p className="text-sm text-slate-400">Remaining Days</p>
+                      <p className={`font-semibold ${user.remainingDays < 30 ? 'text-red-400' : 'text-green-400'}`}>
                         {user.remainingDays}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Status</p>
+                      <p className="text-sm text-slate-400">Status</p>
                       <div className="flex items-center gap-2">
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleToggleUserStatus(user.id)}
-                          className="p-0"
+                          className="p-0 hover:bg-slate-800"
                         >
                           {user.isActive ? (
-                            <ToggleRight className="w-6 h-6 text-green-600" />
+                            <ToggleRight className="w-6 h-6 text-green-400" />
                           ) : (
-                            <ToggleLeft className="w-6 h-6 text-gray-400" />
+                            <ToggleLeft className="w-6 h-6 text-slate-500" />
                           )}
                         </Button>
-                        <span className={`text-sm ${user.isActive ? 'text-green-600' : 'text-gray-500'}`}>
+                        <span className={`text-sm ${user.isActive ? 'text-green-400' : 'text-slate-500'}`}>
                           {user.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>
