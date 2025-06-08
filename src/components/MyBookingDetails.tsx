@@ -21,6 +21,8 @@ interface BookingData {
   remainingDays?: number;
   startDate?: string;
   planDetails?: string;
+  fromTime?: string;
+  toTime?: string;
 }
 
 interface MyBookingDetailsProps {
@@ -76,6 +78,12 @@ const MyBookingDetails: React.FC<MyBookingDetailsProps> = ({
                   <div>
                     <p className="text-sm text-slate-400 mb-1">Start Date</p>
                     <p className="text-lg text-white">{userBooking.startDate}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400 mb-1">Timing</p>
+                    <p className="text-lg text-white">
+                      {userBooking.fromTime || '9:00 AM'} - {userBooking.toTime || '9:00 PM'}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -138,6 +146,9 @@ const MyBookingDetails: React.FC<MyBookingDetailsProps> = ({
                     <div>
                       <p className="font-semibold text-white">Current 6-Month Plan</p>
                       <p className="text-sm text-slate-400">{userBooking.startDate} - {userBooking.validTill}</p>
+                      <p className="text-sm text-slate-300">
+                        Timing: {userBooking.fromTime || '9:00 AM'} - {userBooking.toTime || '9:00 PM'}
+                      </p>
                     </div>
                     <Badge variant="default">Active</Badge>
                   </div>

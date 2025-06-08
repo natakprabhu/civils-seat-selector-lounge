@@ -58,6 +58,8 @@ interface BookingData {
   remainingDays?: number;
   startDate?: string;
   planDetails?: string;
+  fromTime?: string;
+  toTime?: string;
 }
 
 const createSeatsData = () => {
@@ -133,7 +135,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     validTill: '2024-07-16',
     remainingDays: 45,
     startDate: '2024-01-16',
-    planDetails: '6 Month Plan'
+    planDetails: '6 Month Plan',
+    fromTime: '9:00 AM',
+    toTime: '9:00 PM'
   });
 
   // Mock last transaction only
