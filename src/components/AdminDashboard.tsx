@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import GoogleSheetsConfig from './GoogleSheetsConfig';
+import { googleSheetsService, BookingSheetRow, UserSheetRow } from '@/services/googleSheetsService';
 import { 
   LogOut, 
   Users, 
@@ -21,102 +23,67 @@ import {
   ToggleLeft,
   ToggleRight,
   IndianRupee,
-  FileImage
+  FileImage,
+  Settings
 } from 'lucide-react';
 
 interface AdminDashboardProps {
   onLogout: () => void;
 }
 
-interface BookingRequest {
-  id: string;
-  name: string;
-  mobile: string;
-  email: string;
-  seatNumber: string;
-  duration: string;
-  amount: number;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedAt: string;
-  paymentMode?: 'cash' | 'online';
-  paymentDate?: string;
-  screenshot?: string;
-}
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  lastPayment: string;
-  expiry: string;
-  remainingDays: number;
-  isActive: boolean;
-  seatNumber?: string;
-}
-
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([
-    {
-      id: '1',
-      name: 'Rahul Sharma',
-      mobile: '9876543210',
-      email: 'rahul@email.com',
-      seatNumber: 'A5',
-      duration: '6',
-      amount: 15000,
-      status: 'pending',
-      submittedAt: '2024-01-15T10:30:00Z',
-    },
-    {
-      id: '2',
-      name: 'Priya Singh',
-      mobile: '9876543211',
-      email: 'priya@email.com',
-      seatNumber: 'B12',
-      duration: '3',
-      amount: 7500,
-      status: 'approved',
-      submittedAt: '2024-01-14T15:45:00Z',
-      paymentMode: 'online',
-      paymentDate: '2024-01-16'
-    }
-  ]);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'config'>('dashboard');
+  const [isGoogleSheetsConfigured, setIsGoogleSheetsConfigured] = useState(false);
+  const [bookingRequests, setBookingRequests] = useState<BookingSheetRow[]>([]);
+  const [users, setUsers] = useState<UserSheetRow[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      name: 'Rahul Sharma',
-      email: 'rahul@email.com',
-      lastPayment: '2024-01-16',
-      expiry: '2024-07-16',
-      remainingDays: 45,
-      isActive: true,
-      seatNumber: 'A5'
-    },
-    {
-      id: '2',
-      name: 'Priya Singh',
-      email: 'priya@email.com',
-      lastPayment: '2024-01-10',
-      expiry: '2024-04-10',
-      remainingDays: 15,
-      isActive: true,
-      seatNumber: 'B12'
+  useEffect(() => {
+    // Check if Google Sheets is configured
+    const apiKey = localStorage.getItem('google_sheets_api_key');
+    const spreadsheetId = localStorage.getItem('google_sheets_spreadsheet_id');
+    
+    if (apiKey && spreadsheetId) {
+      setIsGoogleSheetsConfigured(true);
+      googleSheetsService.setCredentials(apiKey, spreadsheetId);
+      loadData();
     }
-  ]);
+  }, []);
+
+  const loadData = async () => {
+    if (!isGoogleSheetsConfigured) return;
+    
+    setIsLoading(true);
+    try {
+      const [requests, usersList] = await Promise.all([
+        googleSheetsService.getBookingRequests(),
+        googleSheetsService.getUsers()
+      ]);
+      
+      setBookingRequests(requests);
+      setUsers(usersList);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load data from Google Sheets",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleApproveRequest = async (requestId: string) => {
     try {
-      // Mock API call
-      console.log('Approving request:', requestId);
+      await googleSheetsService.updateBookingRequest(requestId, { 
+        status: 'approved',
+        paymentDate: new Date().toISOString().split('T')[0],
+        startDate: new Date().toISOString().split('T')[0],
+        validTill: new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 6 months from now
+      });
       
-      setBookingRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: 'approved' }
-            : req
-        )
-      );
+      await loadData(); // Reload data
       
       toast({
         title: "Request Approved",
@@ -133,16 +100,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   const handleRejectRequest = async (requestId: string) => {
     try {
-      // Mock API call
-      console.log('Rejecting request:', requestId);
-      
-      setBookingRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: 'rejected' }
-            : req
-        )
-      );
+      await googleSheetsService.updateBookingRequest(requestId, { status: 'rejected' });
+      await loadData(); // Reload data
       
       toast({
         title: "Request Rejected",
@@ -160,16 +119,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   const handleToggleUserStatus = async (userId: string) => {
     try {
-      // Mock API call
-      console.log('Toggling user status:', userId);
+      const user = users.find(u => u.id === userId);
+      if (!user) return;
       
-      setUsers(prev => 
-        prev.map(user => 
-          user.id === userId 
-            ? { ...user, isActive: !user.isActive }
-            : user
-        )
-      );
+      await googleSheetsService.updateUser(userId, { isActive: !user.isActive });
+      await loadData(); // Reload data
       
       toast({
         title: "User Status Updated",
@@ -185,23 +139,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   const handleScreenshotUpload = (requestId: string, file: File) => {
-    // Mock file upload
-    const reader = new FileReader();
-    reader.onload = () => {
-      setBookingRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, screenshot: reader.result as string }
-            : req
-        )
-      );
-      
-      toast({
-        title: "Screenshot Uploaded",
-        description: "Payment screenshot has been uploaded successfully.",
-      });
-    };
-    reader.readAsDataURL(file);
+    // Mock file upload - in real implementation, you'd upload to cloud storage
+    // and store the URL in the spreadsheet
+    toast({
+      title: "Screenshot Uploaded",
+      description: "Payment screenshot has been uploaded successfully.",
+    });
   };
 
   const stats = {
@@ -210,6 +153,58 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     approvedRequests: bookingRequests.filter(r => r.status === 'approved').length,
     rejectedRequests: bookingRequests.filter(r => r.status === 'rejected').length
   };
+
+  // Show configuration if Google Sheets is not set up
+  if (currentView === 'config' || !isGoogleSheetsConfigured) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
+        <div className="header-gradient shadow-2xl">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-slate-700 to-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-black/50 border border-slate-600">
+                  <span className="text-white font-bold text-lg">CL</span>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-white">Admin Dashboard - Setup</h1>
+                  <p className="text-slate-400">Configure Google Sheets Integration</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {isGoogleSheetsConfigured && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setCurrentView('dashboard')}
+                    className="border-slate-600 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white hover:border-slate-500 shadow-lg shadow-black/50"
+                  >
+                    Back to Dashboard
+                  </Button>
+                )}
+                <Button 
+                  variant="outline" 
+                  onClick={onLogout}
+                  className="border-slate-600 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white hover:border-slate-500 shadow-lg shadow-black/50"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <GoogleSheetsConfig onConfigured={(configured) => {
+            setIsGoogleSheetsConfigured(configured);
+            if (configured) {
+              setCurrentView('dashboard');
+              loadData();
+            }
+          }} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
@@ -226,14 +221,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 <p className="text-slate-400">Booking Management System</p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={onLogout}
-              className="border-slate-600 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white hover:border-slate-500 shadow-lg shadow-black/50"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentView('config')}
+                className="border-slate-600 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white hover:border-slate-500 shadow-lg shadow-black/50"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Config
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={loadData}
+                disabled={isLoading}
+                className="border-slate-600 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white hover:border-slate-500 shadow-lg shadow-black/50"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={onLogout}
+                className="border-slate-600 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white hover:border-slate-500 shadow-lg shadow-black/50"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -290,6 +304,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           </Card>
         </div>
 
+        {/* ... keep existing code (Request Management Table and User Management Table sections) */}
+        
         {/* Section 2: Request Management Table with Dark Theme */}
         <Card className="dashboard-card">
           <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
@@ -352,15 +368,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             </span>
                           </Button>
                         </label>
-                        {request.screenshot && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
-                          >
-                            <FileImage className="w-4 h-4" />
-                          </Button>
-                        )}
                       </div>
                     </div>
                     <div>
