@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +11,9 @@ import SeatChangeRequest from './SeatChangeRequest';
 import TransactionHistory from './TransactionHistory';
 import EditProfile from './EditProfile';
 import BookingSuccess from './BookingSuccess';
+import ExtendBooking from './ExtendBooking';
+import MyBookingDetails from './MyBookingDetails';
+import AllTransactions from './AllTransactions';
 import { 
   LogOut, 
   User, 
@@ -30,7 +32,9 @@ import {
   Activity,
   TrendingUp,
   Shield,
-  ArrowRight
+  ArrowRight,
+  Plus,
+  AlertCircle
 } from 'lucide-react';
 
 interface ClientDashboardProps {
@@ -105,12 +109,13 @@ const createSeatsData = () => {
 };
 
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'seat-change' | 'transactions' | 'edit-profile' | 'booking-success' | 'my-booking'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'seat-change' | 'transactions' | 'edit-profile' | 'booking-success' | 'my-booking' | 'extend-booking' | 'all-transactions'>('dashboard');
   const [selectedSeat, setSelectedSeat] = useState<string>('');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [seats] = useState(() => createSeatsData());
-  const [isEditing, setIsEditing] = useState(false);
+  const [waitlistPosition] = useState(3); // Mock waitlist position
+  const [hasPendingSeatChange, setHasPendingSeatChange] = useState(false);
 
   // Mock user data with enhanced booking details
   const [userBooking, setUserBooking] = useState<BookingData>({
@@ -131,33 +136,15 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     planDetails: '6 Month Plan'
   });
 
-  // Mock recent transactions data (last 3 transactions only)
-  const recentTransactions = [
-    {
-      id: 1,
-      date: '2024-01-16',
-      type: 'Seat Booking',
-      amount: 15000,
-      status: 'Paid',
-      description: 'Seat A5 - 6 months'
-    },
-    {
-      id: 2,
-      date: '2024-01-10',
-      type: 'Seat Change',
-      amount: 0,
-      status: 'Waiting for confirmation',
-      description: 'Change from A3 to A5'
-    },
-    {
-      id: 3,
-      date: '2023-12-15',
-      type: 'Extension',
-      amount: 7500,
-      status: 'Paid',
-      description: 'Extended 3 months'
-    }
-  ].slice(0, 3); // Show only last 3 transactions
+  // Mock last transaction only
+  const lastTransaction = {
+    id: 1,
+    date: '2024-01-16',
+    type: 'Seat Booking',
+    amount: 15000,
+    status: userBooking.paymentStatus === 'approved' ? 'Paid' : 'Waiting for confirmation',
+    description: 'Seat A5 - 6 months'
+  };
 
   const [bookingFormData, setBookingFormData] = useState({
     name: '',
@@ -185,7 +172,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
   const handleBookingSubmit = async () => {
     try {
-      // Mock API call
       console.log('Submitting booking request:', bookingFormData);
       
       setShowBookingModal(false);
@@ -200,18 +186,24 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     }
   };
 
-  const handleDownloadReceipt = () => {
-    toast({
-      title: "Receipt Downloaded",
-      description: "Receipt has been downloaded successfully.",
-    });
-  };
-
   const handleRequestSeatChange = () => {
+    if (hasPendingSeatChange) {
+      toast({
+        title: "Pending Request",
+        description: "You already have a pending seat change request. Please wait for approval or cancel the existing request.",
+        variant: "destructive"
+      });
+      return;
+    }
     setCurrentView('seat-change');
   };
 
   const handleSeatChangeSubmit = (newSeat: string) => {
+    setHasPendingSeatChange(true);
+    setCurrentView('dashboard');
+  };
+
+  const handleExtendBooking = (months: number, amount: number) => {
     setCurrentView('dashboard');
   };
 
@@ -234,6 +226,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   if (currentView === 'transactions') {
     return (
       <TransactionHistory
+        onBack={() => setCurrentView('dashboard')}
+      />
+    );
+  }
+
+  if (currentView === 'all-transactions') {
+    return (
+      <AllTransactions
         onBack={() => setCurrentView('dashboard')}
       />
     );
@@ -264,59 +264,21 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
   if (currentView === 'my-booking') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-4 mb-6">
-            <Button 
-              onClick={() => setCurrentView('dashboard')} 
-              className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
-            >
-              ← Back to Dashboard
-            </Button>
-            <h1 className="text-2xl font-bold text-white">My Booking Details</h1>
-          </div>
-          
-          <Card className="dashboard-card">
-            <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
-              <CardTitle className="text-xl font-bold text-white">Current Booking</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Seat Number</p>
-                    <p className="text-xl font-bold text-white">{userBooking.seatNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Plan</p>
-                    <p className="text-lg text-white">{userBooking.planDetails}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Start Date</p>
-                    <p className="text-lg text-white">{userBooking.startDate}</p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Valid Till</p>
-                    <p className="text-lg text-white">{userBooking.validTill}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Days Remaining</p>
-                    <p className="text-xl font-bold text-green-400">{userBooking.remainingDays}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Status</p>
-                    <Badge variant="default" className="text-sm">
-                      {userBooking.status === 'approved' ? 'Active' : userBooking.status}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <MyBookingDetails
+        userBooking={userBooking}
+        onBack={() => setCurrentView('dashboard')}
+        onViewTransactions={() => setCurrentView('all-transactions')}
+      />
+    );
+  }
+
+  if (currentView === 'extend-booking') {
+    return (
+      <ExtendBooking
+        currentBooking={userBooking}
+        onBack={() => setCurrentView('dashboard')}
+        onExtend={handleExtendBooking}
+      />
     );
   }
 
@@ -368,7 +330,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                       variant="ghost" 
                       className="w-full justify-start text-white hover:bg-slate-800/50" 
                       onClick={() => {
-                        setCurrentView('transactions');
+                        setCurrentView('all-transactions');
                         setShowUserDropdown(false);
                       }}
                     >
@@ -399,6 +361,21 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        {/* Waitlist Info - Show at top if user has waitlist position */}
+        {waitlistPosition > 0 && userBooking.status !== 'approved' && (
+          <Card className="dashboard-card border-orange-500/50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-orange-400" />
+                <div>
+                  <p className="font-semibold text-white">Waitlist Position</p>
+                  <p className="text-sm text-slate-400">You are #{waitlistPosition} in the waitlist for seat allocation</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Section 1: Condensed Stats Cards */}
         <div className="grid md:grid-cols-3 gap-4">
           <Card className="stat-card">
@@ -474,8 +451,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                     size="sm" 
                     onClick={handleRequestSeatChange} 
                     className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
+                    disabled={hasPendingSeatChange}
                   >
-                    Request Change
+                    {hasPendingSeatChange ? 'Request Pending' : 'Request Change'}
                   </Button>
                 </div>
               ) : (
@@ -493,7 +471,17 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               <p className="text-2xl font-bold text-white mb-1">
                 {userBooking.remainingDays || 0}
               </p>
-              <TrendingUp className="w-5 h-5 text-slate-500" />
+              {userBooking.status === 'approved' && (
+                <Button 
+                  size="sm" 
+                  onClick={() => setCurrentView('extend-booking')}
+                  className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600 mt-2"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Extend
+                </Button>
+              )}
+              <TrendingUp className="w-5 h-5 text-slate-500 mt-1" />
             </CardContent>
           </Card>
           
@@ -510,53 +498,57 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               >
                 {userBooking.paymentStatus === 'approved' ? 'Paid' : 'Waiting for confirmation'}
               </Badge>
-              <Shield className="w-5 h-5 text-slate-500" />
+              <Button 
+                size="sm" 
+                onClick={() => setCurrentView('all-transactions')}
+                className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
+              >
+                All Transactions
+              </Button>
             </CardContent>
           </Card>
         </div>
 
-        {/* Section 3: Recent Transactions - Last booking details only */}
+        {/* Section 3: My Booking Details - Last transaction only with View All button */}
         <Card className="dashboard-card">
           <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
             <CardTitle className="text-xl font-bold text-white flex items-center justify-between">
               My Booking Details
               <Button 
                 size="sm" 
-                onClick={() => setCurrentView('transactions')} 
+                onClick={() => setCurrentView('all-transactions')} 
                 className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
               >
-                View All Transactions
+                View All
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="space-y-4">
-              {recentTransactions.map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-800/30 to-slate-900/30 rounded-lg border border-slate-700/50">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center border border-slate-600">
-                      <Receipt className="w-5 h-5 text-slate-300" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">{transaction.type}</p>
-                      <p className="text-sm text-slate-400">{transaction.description}</p>
-                    </div>
+            <div className="p-4 bg-gradient-to-r from-slate-800/30 to-slate-900/30 rounded-lg border border-slate-700/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center border border-slate-600">
+                    <Receipt className="w-5 h-5 text-slate-300" />
                   </div>
-                  <div className="text-right">
-                    <div className="flex items-center gap-1 mb-1">
-                      <IndianRupee className="w-3 h-3 text-white" />
-                      <span className="font-semibold text-white">{transaction.amount}</span>
-                    </div>
-                    <Badge 
-                      variant={transaction.status === 'Paid' ? 'default' : 'secondary'}
-                      className="text-xs"
-                    >
-                      {transaction.status}
-                    </Badge>
+                  <div>
+                    <p className="font-semibold text-white">{lastTransaction.type}</p>
+                    <p className="text-sm text-slate-400">{lastTransaction.description}</p>
                   </div>
                 </div>
-              ))}
+                <div className="text-right">
+                  <div className="flex items-center gap-1 mb-1">
+                    <IndianRupee className="w-3 h-3 text-white" />
+                    <span className="font-semibold text-white">{lastTransaction.amount}</span>
+                  </div>
+                  <Badge 
+                    variant={lastTransaction.status === 'Paid' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {lastTransaction.status}
+                  </Badge>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
