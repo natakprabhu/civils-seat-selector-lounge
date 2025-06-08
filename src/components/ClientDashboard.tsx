@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,6 @@ import BookingSuccess from './BookingSuccess';
 import ExtendBooking from './ExtendBooking';
 import MyBookingDetails from './MyBookingDetails';
 import AllTransactions from './AllTransactions';
-import { googleSheetsService } from '@/services/googleSheetsService';
 import { 
   LogOut, 
   User, 
@@ -158,19 +157,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     seatId: ''
   });
 
-  // Check if Google Sheets is configured
-  const [isGoogleSheetsConfigured, setIsGoogleSheetsConfigured] = useState(false);
-
-  useEffect(() => {
-    const apiKey = localStorage.getItem('google_sheets_api_key');
-    const spreadsheetId = localStorage.getItem('google_sheets_spreadsheet_id');
-    
-    if (apiKey && spreadsheetId) {
-      setIsGoogleSheetsConfigured(true);
-      googleSheetsService.setCredentials(apiKey, spreadsheetId);
-    }
-  }, []);
-
   // Calculate seat statistics
   const totalSeats = seats.length;
   const availableSeats = seats.filter(s => s.status === 'vacant').length;
@@ -191,32 +177,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const handleBookingSubmit = async () => {
     try {
       console.log('Submitting booking request:', bookingFormData);
-      
-      if (isGoogleSheetsConfigured) {
-        // Submit to Google Sheets
-        await googleSheetsService.addBookingRequest({
-          name: bookingFormData.name,
-          mobile: userMobile,
-          email: bookingFormData.email,
-          seatNumber: bookingFormData.seatId,
-          duration: bookingFormData.duration,
-          amount: parseInt(bookingFormData.duration) * 2500,
-          status: 'pending',
-          submittedAt: new Date().toISOString(),
-          fromTime: '9:00 AM',
-          toTime: '9:00 PM'
-        });
-        
-        toast({
-          title: "Request Submitted",
-          description: "Your booking request has been submitted to Google Sheets and is pending approval.",
-        });
-      } else {
-        toast({
-          title: "Request Submitted",
-          description: "Your booking request has been submitted locally (Google Sheets not configured).",
-        });
-      }
       
       setShowBookingModal(false);
       setCurrentView('booking-success');
@@ -405,21 +365,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {/* Google Sheets Status Info */}
-        {!isGoogleSheetsConfigured && (
-          <Card className="dashboard-card border-orange-500/50">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-orange-400" />
-                <div>
-                  <p className="font-semibold text-white">Google Sheets Not Configured</p>
-                  <p className="text-sm text-slate-400">Booking requests will be stored locally only. Contact admin to enable Google Sheets integration.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Waitlist Info - Show at top if user has waitlist position */}
         {waitlistPosition > 0 && userBooking.status !== 'approved' && (
           <Card className="dashboard-card border-orange-500/50">
