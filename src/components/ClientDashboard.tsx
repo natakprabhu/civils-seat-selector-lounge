@@ -29,10 +29,6 @@ import {
   MapPin,
   Users,
   ChevronDown,
-  Activity,
-  TrendingUp,
-  Shield,
-  ArrowRight,
   Plus,
   AlertCircle
 } from 'lucide-react';
@@ -294,10 +290,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-r from-slate-700 to-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-black/50 border border-slate-600">
-                <span className="text-white font-bold text-lg">CL</span>
+                <img 
+                  src="/lovable-uploads/44a09473-e73f-4b90-a571-07436f03ef6e.png" 
+                  alt="अध्ययन Library Logo" 
+                  className="w-10 h-10 object-contain"
+                />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">Student Dashboard</h1>
+                <h1 className="text-2xl font-bold text-white">अध्ययन Library</h1>
                 <p className="text-slate-400">Welcome back! Mobile: {userMobile}</p>
               </div>
             </div>
@@ -419,7 +419,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </Card>
         </div>
 
-        {/* Section 2: Status Cards - Enhanced with start date and plan details */}
+        {/* Section 2: Status Cards - Remove icons from Current Status and Days Remaining */}
         <div className="grid md:grid-cols-4 gap-4">
           <Card className="dashboard-card h-40">
             <CardContent className="p-4 flex flex-col justify-center items-center text-center h-full">
@@ -440,7 +440,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                   <p className="text-xs text-cyan-300 font-medium">{userBooking.planDetails}</p>
                 </div>
               )}
-              <Activity className="w-5 h-5 text-slate-500 mt-2" />
             </CardContent>
           </Card>
           
@@ -485,7 +484,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                   Extend
                 </Button>
               )}
-              <TrendingUp className="w-5 h-5 text-slate-500 mt-1" />
             </CardContent>
           </Card>
           

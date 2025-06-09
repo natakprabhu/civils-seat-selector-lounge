@@ -4,17 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Search, Calendar, IndianRupee, MapPin, Clock } from 'lucide-react';
+import { ArrowLeft, Search, Calendar, IndianRupee, MapPin, Clock, Download } from 'lucide-react';
 
 interface Transaction {
   id: string;
   date: string;
+  time: string;
   type: 'booking' | 'extension' | 'seat_change';
-  description: string;
+  transactionName: string;
   amount: number;
   status: 'completed' | 'pending' | 'cancelled';
-  fromDate?: string;
-  toDate?: string;
+  receiptNumber?: string;
   seatNumber?: string;
 }
 
@@ -25,42 +25,55 @@ interface AllTransactionsProps {
 const AllTransactions: React.FC<AllTransactionsProps> = ({ onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Mock enhanced transaction data
+  // Enhanced mock transaction data
   const [transactions] = useState<Transaction[]>([
     {
       id: '1',
       date: '2024-01-16',
+      time: '10:30 AM',
       type: 'booking',
-      description: '6-Month Plan',
+      transactionName: 'Seat Booking - 6 Month Plan',
       amount: 15000,
       status: 'completed',
-      fromDate: '2024-01-16',
-      toDate: '2024-07-16',
+      receiptNumber: 'REC-2024-001',
       seatNumber: 'A5'
     },
     {
       id: '2',
       date: '2024-01-10',
+      time: '2:15 PM',
       type: 'seat_change',
-      description: 'Seat Change Request',
-      amount: 0,
+      transactionName: 'Seat Change Request Fee',
+      amount: 500,
       status: 'pending',
+      receiptNumber: 'REC-2024-002',
       seatNumber: 'A3 → A5'
     },
     {
       id: '3',
       date: '2023-12-15',
+      time: '11:45 AM',
       type: 'extension',
-      description: '3-Month Extension',
+      transactionName: 'Plan Extension - 3 Months',
       amount: 7500,
       status: 'completed',
-      fromDate: '2023-12-15',
-      toDate: '2024-03-15'
+      receiptNumber: 'REC-2023-045'
+    },
+    {
+      id: '4',
+      date: '2023-12-01',
+      time: '9:20 AM',
+      type: 'booking',
+      transactionName: 'Initial Seat Booking',
+      amount: 12000,
+      status: 'cancelled',
+      receiptNumber: 'REC-2023-040'
     }
   ]);
 
   const filteredTransactions = transactions.filter(transaction =>
-    transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    transaction.transactionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    transaction.receiptNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     transaction.seatNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -88,6 +101,11 @@ const AllTransactions: React.FC<AllTransactionsProps> = ({ onBack }) => {
       default:
         return <Calendar className="w-4 h-4" />;
     }
+  };
+
+  const handleDownloadReceipt = (receiptNumber: string) => {
+    console.log('Downloading receipt:', receiptNumber);
+    // Mock download functionality
   };
 
   return (
@@ -132,41 +150,50 @@ const AllTransactions: React.FC<AllTransactionsProps> = ({ onBack }) => {
                   <div key={transaction.id} className="p-4 bg-gradient-to-r from-slate-800/30 to-slate-900/30 rounded-lg border border-slate-700/50">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                       <div className="flex-1">
-                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
                           <div className="flex items-start gap-3">
                             <div className="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center border border-slate-600 mt-1">
                               {getTypeIcon(transaction.type)}
                             </div>
                             <div>
-                              <p className="font-semibold text-white">{transaction.description}</p>
-                              <p className="text-sm text-slate-400">{transaction.date}</p>
+                              <p className="font-semibold text-white">{transaction.transactionName}</p>
+                              <p className="text-sm text-slate-400">{transaction.receiptNumber}</p>
                             </div>
                           </div>
                           
-                          {transaction.fromDate && transaction.toDate && (
-                            <div>
-                              <p className="text-sm text-slate-400">Duration</p>
-                              <p className="text-white">{transaction.fromDate} to {transaction.toDate}</p>
-                            </div>
-                          )}
+                          <div>
+                            <p className="text-sm text-slate-400">Date & Time</p>
+                            <p className="text-white">{transaction.date}</p>
+                            <p className="text-sm text-slate-400">{transaction.time}</p>
+                          </div>
                           
-                          {transaction.seatNumber && (
-                            <div>
-                              <p className="text-sm text-slate-400">Seat</p>
-                              <p className="text-white">{transaction.seatNumber}</p>
+                          <div>
+                            <p className="text-sm text-slate-400">Amount</p>
+                            <div className="flex items-center gap-1">
+                              <IndianRupee className="w-4 h-4 text-white" />
+                              <span className="font-semibold text-white">{transaction.amount}</span>
                             </div>
-                          )}
+                          </div>
                           
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="flex items-center gap-1 mb-1">
-                                <IndianRupee className="w-4 h-4 text-white" />
-                                <span className="font-semibold text-white">{transaction.amount}</span>
-                              </div>
-                              <Badge variant={getStatusColor(transaction.status)} className="text-xs">
-                                {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                              </Badge>
-                            </div>
+                          <div>
+                            <p className="text-sm text-slate-400">Status</p>
+                            <Badge variant={getStatusColor(transaction.status)} className="text-xs">
+                              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex items-center justify-end">
+                            {transaction.receiptNumber && transaction.status === 'completed' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleDownloadReceipt(transaction.receiptNumber!)}
+                                className="border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
+                              >
+                                <Download className="w-4 h-4 mr-1" />
+                                Receipt
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
