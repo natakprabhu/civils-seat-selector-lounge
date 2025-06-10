@@ -9,16 +9,422 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      library_settings: {
+        Row: {
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          mobile: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name: string
+          id: string
+          mobile: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          mobile?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      seat_bookings: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          duration_months: number
+          end_date: string | null
+          id: string
+          notes: string | null
+          requested_at: string | null
+          seat_id: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["booking_status"] | null
+          total_amount: number
+          user_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          duration_months: number
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          requested_at?: string | null
+          seat_id?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["booking_status"] | null
+          total_amount: number
+          user_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          duration_months?: number
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          requested_at?: string | null
+          seat_id?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["booking_status"] | null
+          total_amount?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_bookings_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_bookings_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_change_requests: {
+        Row: {
+          current_booking_id: string | null
+          fee_amount: number | null
+          id: string
+          new_seat_id: string | null
+          processed_at: string | null
+          processed_by: string | null
+          reason: string | null
+          requested_at: string | null
+          status: Database["public"]["Enums"]["booking_status"] | null
+          user_id: string | null
+        }
+        Insert: {
+          current_booking_id?: string | null
+          fee_amount?: number | null
+          id?: string
+          new_seat_id?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          requested_at?: string | null
+          status?: Database["public"]["Enums"]["booking_status"] | null
+          user_id?: string | null
+        }
+        Update: {
+          current_booking_id?: string | null
+          fee_amount?: number | null
+          id?: string
+          new_seat_id?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          requested_at?: string | null
+          status?: Database["public"]["Enums"]["booking_status"] | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_change_requests_current_booking_id_fkey"
+            columns: ["current_booking_id"]
+            isOneToOne: false
+            referencedRelation: "seat_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_change_requests_new_seat_id_fkey"
+            columns: ["new_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_change_requests_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_change_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_locks: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          seat_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          seat_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          seat_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_locks_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: true
+            referencedRelation: "seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_locks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seats: {
+        Row: {
+          created_at: string | null
+          id: string
+          monthly_rate: number
+          row_number: string
+          seat_number: string
+          section: string
+          status: Database["public"]["Enums"]["seat_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          monthly_rate?: number
+          row_number: string
+          seat_number: string
+          section: string
+          status?: Database["public"]["Enums"]["seat_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          monthly_rate?: number
+          row_number?: string
+          seat_number?: string
+          section?: string
+          status?: Database["public"]["Enums"]["seat_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          booking_id: string | null
+          change_request_id: string | null
+          description: string
+          id: string
+          notes: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          payment_proof_url: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"] | null
+          processed_by: string | null
+          receipt_number: string | null
+          transaction_date: string | null
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id?: string | null
+          change_request_id?: string | null
+          description: string
+          id?: string
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_proof_url?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          processed_by?: string | null
+          receipt_number?: string | null
+          transaction_date?: string | null
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string | null
+          change_request_id?: string | null
+          description?: string
+          id?: string
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_proof_url?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          processed_by?: string | null
+          receipt_number?: string | null
+          transaction_date?: string | null
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "seat_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_change_request_id_fkey"
+            columns: ["change_request_id"]
+            isOneToOne: false
+            referencedRelation: "seat_change_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_expired_locks: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      generate_receipt_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      booking_status: "pending" | "approved" | "cancelled" | "expired"
+      payment_method: "cash" | "online" | "upi" | "card"
+      payment_status: "pending" | "approved" | "rejected"
+      seat_status: "vacant" | "booked" | "maintenance"
+      transaction_type: "booking" | "extension" | "seat_change" | "refund"
+      user_role: "admin" | "staff" | "client"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +539,13 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      booking_status: ["pending", "approved", "cancelled", "expired"],
+      payment_method: ["cash", "online", "upi", "card"],
+      payment_status: ["pending", "approved", "rejected"],
+      seat_status: ["vacant", "booked", "maintenance"],
+      transaction_type: ["booking", "extension", "seat_change", "refund"],
+      user_role: ["admin", "staff", "client"],
+    },
   },
 } as const

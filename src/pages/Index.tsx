@@ -1,36 +1,40 @@
 
-import React, { useState } from 'react';
-import PreLoginPage from '@/components/PreLoginPage';
-import ClientDashboard from '@/components/ClientDashboard';
-import AdminPage from '@/components/AdminPage';
-import StaffDashboard from '@/components/StaffDashboard';
+import { useAuth } from "@/hooks/useAuth";
+import PreLoginPage from "@/components/PreLoginPage";
+import ClientDashboard from "@/components/ClientDashboard";
+import AdminDashboard from "@/components/AdminDashboard";
+import StaffDashboard from "@/components/StaffDashboard";
 
 const Index = () => {
-  const [user, setUser] = useState<{
-    mobile: string;
-    userType: 'client' | 'admin' | 'staff';
-  } | null>(null);
+  const { user, userRole, loading } = useAuth();
 
-  const handleLogin = (mobile: string, userType: 'client' | 'admin' | 'staff') => {
-    setUser({ mobile, userType });
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-  };
-
-  if (!user) {
-    return <PreLoginPage onLogin={handleLogin} />;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
   }
 
-  switch (user.userType) {
+  if (!user) {
+    return <PreLoginPage onLogin={() => {}} />;
+  }
+
+  // Handle demo login from PreLoginPage (backwards compatibility)
+  const handleDemoLogin = (mobile: string, userType: 'client' | 'admin' | 'staff') => {
+    // This is handled by the auth system now
+    console.log('Demo login attempted:', mobile, userType);
+  };
+
+  // Route based on user role
+  switch (userRole) {
     case 'admin':
-      return <AdminPage onLogout={handleLogout} />;
+      return <AdminDashboard />;
     case 'staff':
-      return <StaffDashboard onLogout={handleLogout} />;
+      return <StaffDashboard />;
     case 'client':
     default:
-      return <ClientDashboard userMobile={user.mobile} onLogout={handleLogout} />;
+      return <ClientDashboard />;
   }
 };
 
