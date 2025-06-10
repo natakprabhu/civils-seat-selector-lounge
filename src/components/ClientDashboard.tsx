@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +31,8 @@ import {
   Users,
   ChevronDown,
   Plus,
-  AlertCircle
+  AlertCircle,
+  ArrowRight
 } from 'lucide-react';
 
 interface ClientDashboardProps {
