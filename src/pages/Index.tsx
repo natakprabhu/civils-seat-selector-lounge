@@ -6,7 +6,7 @@ import AdminDashboard from "@/components/AdminDashboard";
 import StaffDashboard from "@/components/StaffDashboard";
 
 const Index = () => {
-  const { user, userRole, loading } = useAuth();
+  const { user, userRole, loading, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -20,21 +20,24 @@ const Index = () => {
     return <PreLoginPage onLogin={() => {}} />;
   }
 
-  // Handle demo login from PreLoginPage (backwards compatibility)
-  const handleDemoLogin = (mobile: string, userType: 'client' | 'admin' | 'staff') => {
-    // This is handled by the auth system now
-    console.log('Demo login attempted:', mobile, userType);
+  const handleLogout = async () => {
+    await signOut();
   };
 
   // Route based on user role
   switch (userRole) {
     case 'admin':
-      return <AdminDashboard />;
+      return <AdminDashboard onLogout={handleLogout} />;
     case 'staff':
-      return <StaffDashboard />;
+      return <StaffDashboard onLogout={handleLogout} />;
     case 'client':
     default:
-      return <ClientDashboard />;
+      return (
+        <ClientDashboard 
+          userMobile={user.phone || user.user_metadata?.mobile || ''} 
+          onLogout={handleLogout} 
+        />
+      );
   }
 };
 
