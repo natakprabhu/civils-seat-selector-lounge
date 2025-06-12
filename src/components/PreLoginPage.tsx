@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Phone } from 'lucide-react';
+import { Phone, User } from 'lucide-react';
 
 interface PreLoginPageProps {
   onLogin: (mobile: string, userType: 'client' | 'admin' | 'staff') => void;
@@ -15,6 +15,13 @@ const PreLoginPage: React.FC<PreLoginPageProps> = ({ onLogin }) => {
   const [otp, setOtp] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Sample credentials
+  const sampleCredentials = [
+    { mobile: '9999999999', role: 'admin' as const },
+    { mobile: '8888888888', role: 'staff' as const },
+    { mobile: '7777777777', role: 'client' as const }
+  ];
 
   const handleSendOtp = () => {
     setIsLoading(true);
@@ -27,10 +34,8 @@ const PreLoginPage: React.FC<PreLoginPageProps> = ({ onLogin }) => {
   const handleVerifyOtp = () => {
     setIsLoading(true);
     setTimeout(() => {
-      let userType: 'client' | 'admin' | 'staff' = 'client';
-      if (mobile === '9873579556') userType = 'admin';
-      else if (mobile === '8888888888') userType = 'staff';
-      
+      const credentials = sampleCredentials.find(cred => cred.mobile === mobile);
+      const userType = credentials ? credentials.role : 'client';
       onLogin(mobile, userType);
       setIsLoading(false);
     }, 1000);
@@ -42,10 +47,10 @@ const PreLoginPage: React.FC<PreLoginPageProps> = ({ onLogin }) => {
         <Card className="shadow-2xl border border-slate-700/50 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-sm">
           <CardHeader className="text-center pb-8 pt-8">
             <div className="w-24 h-24 bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg border border-slate-600">
-              <span className="text-white font-bold text-2xl">CL</span>
+              <span className="text-white font-bold text-2xl">अध्</span>
             </div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-              Civils Lounge
+              अध्ययन Library
             </CardTitle>
             <p className="text-slate-400 text-lg mt-2">UPSC Library Management</p>
           </CardHeader>
@@ -92,6 +97,19 @@ const PreLoginPage: React.FC<PreLoginPageProps> = ({ onLogin }) => {
                 OTP sent to {mobile}. Demo: Use any 4-digit code.
               </p>
             )}
+
+            {/* Sample credentials for testing */}
+            <div className="mt-6 p-4 bg-slate-800 rounded-lg border border-slate-600">
+              <h3 className="text-slate-300 font-semibold mb-2 flex items-center">
+                <User className="w-4 h-4 mr-2" />
+                Sample Credentials (Delete Later)
+              </h3>
+              <div className="space-y-2 text-sm text-slate-400">
+                <div>Admin: 9999999999 (OTP: 1234)</div>
+                <div>Staff: 8888888888 (OTP: 1234)</div>
+                <div>Client: 7777777777 (OTP: 1234)</div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
