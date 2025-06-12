@@ -1,12 +1,12 @@
 
 import { useAuth } from "@/hooks/useAuth";
-import PreLoginPage from "@/components/PreLoginPage";
+import AuthPage from "@/components/AuthPage";
 import ClientDashboard from "@/components/ClientDashboard";
 import AdminDashboard from "@/components/AdminDashboard";
 import StaffDashboard from "@/components/StaffDashboard";
 
 const Index = () => {
-  const { user, userRole, loading, signOut } = useAuth();
+  const { user, userRole, loading, signIn, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -17,7 +17,7 @@ const Index = () => {
   }
 
   if (!user) {
-    return <PreLoginPage onLogin={() => {}} />;
+    return <AuthPage onLogin={signIn} />;
   }
 
   const handleLogout = async () => {

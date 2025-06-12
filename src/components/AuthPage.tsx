@@ -6,9 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from '@/hooks/use-toast';
 import { Phone } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
-const AuthPage: React.FC = () => {
+interface AuthPageProps {
+  onLogin: (mobile: string, userType: 'client' | 'admin' | 'staff') => void;
+}
+
+const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
@@ -21,11 +24,26 @@ const AuthPage: React.FC = () => {
     { mobile: '7777777777', role: 'client', otp: '1234' }
   ];
 
+  const validateMobileNumber = (number: string) => {
+    // Remove any spaces or special characters
+    const cleanNumber = number.replace(/\D/g, '');
+    return cleanNumber.length === 10;
+  };
+
   const handleSendOtp = () => {
     if (!mobile) {
       toast({
         title: "Error",
-        description: "Please enter a valid mobile number",
+        description: "Please enter a mobile number",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!validateMobileNumber(mobile)) {
+      toast({
+        title: "Invalid Mobile Number",
+        description: "Please enter a valid 10-digit mobile number",
         variant: "destructive"
       });
       return;
@@ -63,56 +81,20 @@ const AuthPage: React.FC = () => {
         throw new Error('Invalid mobile number or OTP');
       }
 
-      // Create a mock user session for demo purposes
-      const mockEmail = `${mobile}@demo.com`;
-      const mockPassword = 'demo123';
-
-      // Try to sign in with existing user or create new one
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: mockEmail,
-        password: mockPassword
-      });
-
-      if (signInError && signInError.message.includes('Invalid login credentials')) {
-        // User doesn't exist, create account
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: mockEmail,
-          password: mockPassword,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              full_name: `User ${mobile}`,
-              mobile: mobile,
-              role: credentials.role
-            }
-          }
-        });
-
-        if (signUpError) {
-          throw signUpError;
-        }
-
-        // If signup was successful, sign in immediately for demo
-        if (signUpData.user) {
-          const { error: secondSignInError } = await supabase.auth.signInWithPassword({
-            email: mockEmail,
-            password: mockPassword
-          });
-          
-          if (secondSignInError) {
-            throw secondSignInError;
-          }
-        }
-      } else if (signInError) {
-        throw signInError;
-      }
+      // Store session in localStorage for demo
+      localStorage.setItem('userSession', JSON.stringify({
+        mobile: mobile,
+        role: credentials.role,
+        loginTime: new Date().toISOString()
+      }));
 
       toast({
         title: "Success",
         description: `Logged in successfully as ${credentials.role}`,
       });
 
-      // The auth state change will handle redirect automatically
+      // Call the login callback
+      onLogin(mobile, credentials.role);
       
     } catch (error: any) {
       console.error('Login error:', error);
@@ -123,6 +105,13 @@ const AuthPage: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+    if (value.length <= 10) {
+      setMobile(value);
     }
   };
 
@@ -150,13 +139,17 @@ const AuthPage: React.FC = () => {
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <Input
                   type="tel"
-                  placeholder="Enter Mobile Number"
+                  placeholder="Enter 10-digit Mobile Number"
                   value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
+                  onChange={handleMobileChange}
                   className="pl-10 h-12 text-lg bg-slate-800 border-slate-600 text-white focus:border-cyan-500 focus:ring-cyan-500"
                   disabled={showOtpInput}
+                  maxLength={10}
                 />
               </div>
+              {mobile && !validateMobileNumber(mobile) && (
+                <p className="text-sm text-red-400">Please enter a valid 10-digit mobile number</p>
+              )}
             </div>
             
             {showOtpInput && (
@@ -178,7 +171,7 @@ const AuthPage: React.FC = () => {
             <Button
               onClick={showOtpInput ? handleVerifyOtp : handleSendOtp}
               className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white text-lg font-semibold shadow-lg border border-slate-600"
-              disabled={loading || !mobile || (showOtpInput && otp.length !== 4)}
+              disabled={loading || !mobile || !validateMobileNumber(mobile) || (showOtpInput && otp.length !== 4)}
             >
               <Phone className="w-5 h-5 mr-2" />
               {loading ? 'Processing...' : showOtpInput ? 'Verify OTP' : 'Send OTP'}
