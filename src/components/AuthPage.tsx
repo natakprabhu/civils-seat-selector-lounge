@@ -5,16 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { Phone, User } from 'lucide-react';
+import { Phone } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const AuthPage: React.FC = () => {
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const { signIn } = useAuth();
 
   // Sample credentials for testing
   const sampleCredentials = [
@@ -61,36 +59,63 @@ const AuthPage: React.FC = () => {
       // Find matching credentials
       const credentials = sampleCredentials.find(cred => cred.mobile === mobile);
       
-      if (!credentials) {
-        throw new Error('Mobile number not found in sample data');
+      if (!credentials || otp !== credentials.otp) {
+        throw new Error('Invalid mobile number or OTP');
       }
 
-      if (otp !== credentials.otp) {
-        throw new Error('Invalid OTP');
+      // Create a mock user session for demo purposes
+      const mockEmail = `${mobile}@demo.com`;
+      const mockPassword = 'demo123';
+
+      // Try to sign in with existing user or create new one
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: mockEmail,
+        password: mockPassword
+      });
+
+      if (signInError && signInError.message.includes('Invalid login credentials')) {
+        // User doesn't exist, create account
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: mockEmail,
+          password: mockPassword,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              full_name: `User ${mobile}`,
+              mobile: mobile,
+              role: credentials.role
+            }
+          }
+        });
+
+        if (signUpError) {
+          throw signUpError;
+        }
+
+        // If signup was successful, sign in immediately for demo
+        if (signUpData.user) {
+          const { error: secondSignInError } = await supabase.auth.signInWithPassword({
+            email: mockEmail,
+            password: mockPassword
+          });
+          
+          if (secondSignInError) {
+            throw secondSignInError;
+          }
+        }
+      } else if (signInError) {
+        throw signInError;
       }
 
-      // For demo purposes, we'll create a mock email based on mobile
-      const email = `${mobile}@demo.com`;
-      const password = 'demo123';
+      toast({
+        title: "Success",
+        description: `Logged in successfully as ${credentials.role}`,
+      });
 
-      const { error } = await signIn(email, password);
+      // The auth state change will handle redirect automatically
       
-      if (error) {
-        // If user doesn't exist, this is expected for our demo
-        console.log('User login simulation for:', mobile, 'Role:', credentials.role);
-        toast({
-          title: "Success",
-          description: `Logged in as ${credentials.role}`,
-        });
-        // In a real app, you'd handle the login differently
-        // For now, we'll show success but the actual auth might not work
-      } else {
-        toast({
-          title: "Success",
-          description: `Logged in successfully as ${credentials.role}`,
-        });
-      }
     } catch (error: any) {
+      console.error('Login error:', error);
       toast({
         title: "Error",
         description: error.message || "Login failed",
@@ -107,7 +132,11 @@ const AuthPage: React.FC = () => {
         <Card className="shadow-2xl border border-slate-700/50 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-sm">
           <CardHeader className="text-center pb-8 pt-8">
             <div className="w-24 h-24 bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg border border-slate-600">
-              <span className="text-white font-bold text-2xl">अध्</span>
+              <img 
+                src="/lovable-uploads/84938183-4aaf-4db7-ab36-6b13bd214f25.png" 
+                alt="अध्ययन Library Logo" 
+                className="w-16 h-16 object-contain"
+              />
             </div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
               अध्ययन Library
@@ -160,19 +189,6 @@ const AuthPage: React.FC = () => {
                 OTP sent to {mobile}. Demo: Use 1234 for any number.
               </p>
             )}
-
-            {/* Sample credentials for testing */}
-            <div className="mt-6 p-4 bg-slate-800 rounded-lg border border-slate-600">
-              <h3 className="text-slate-300 font-semibold mb-2 flex items-center">
-                <User className="w-4 h-4 mr-2" />
-                Sample Credentials (Delete Later)
-              </h3>
-              <div className="space-y-2 text-sm text-slate-400">
-                <div>Admin: 9999999999 (OTP: 1234)</div>
-                <div>Staff: 8888888888 (OTP: 1234)</div>
-                <div>Client: 7777777777 (OTP: 1234)</div>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>

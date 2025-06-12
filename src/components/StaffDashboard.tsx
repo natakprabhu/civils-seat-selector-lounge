@@ -4,13 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import NoticeBoard from './NoticeBoard';
 import { 
   LogOut, 
   Users, 
   CheckCircle, 
   Printer,
   Search,
-  Calendar
+  Calendar,
+  Bell
 } from 'lucide-react';
 
 interface StaffDashboardProps {
@@ -31,42 +33,10 @@ interface ConfirmedBooking {
 
 const StaffDashboard: React.FC<StaffDashboardProps> = ({ onLogout }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'notice-board'>('dashboard');
   
-  const [confirmedBookings] = useState<ConfirmedBooking[]>([
-    {
-      id: '1',
-      name: 'Priya Singh',
-      mobile: '9876543211',
-      email: 'priya@email.com',
-      seatNumber: '12',
-      duration: '3',
-      startDate: '2024-01-15',
-      endDate: '2024-04-15',
-      receiptNumber: 'CL-2024-001'
-    },
-    {
-      id: '2',
-      name: 'Rajesh Kumar',
-      mobile: '9876543213',
-      email: 'rajesh@email.com',
-      seatNumber: '25',
-      duration: '6',
-      startDate: '2024-01-10',
-      endDate: '2024-07-10',
-      receiptNumber: 'CL-2024-002'
-    },
-    {
-      id: '3',
-      name: 'Anita Sharma',
-      mobile: '9876543214',
-      email: 'anita@email.com',
-      seatNumber: '33',
-      duration: '12',
-      startDate: '2024-01-05',
-      endDate: '2025-01-05',
-      receiptNumber: 'CL-2024-003'
-    }
-  ]);
+  // Empty array since data is reset
+  const [confirmedBookings] = useState<ConfirmedBooking[]>([]);
 
   const filteredBookings = confirmedBookings.filter(booking =>
     booking.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,6 +59,15 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ onLogout }) => {
     }, 0)
   };
 
+  if (currentView === 'notice-board') {
+    return (
+      <NoticeBoard
+        onBack={() => setCurrentView('dashboard')}
+        isStaff={true}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -97,17 +76,30 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ onLogout }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold">CL</span>
+                <img 
+                  src="/lovable-uploads/84938183-4aaf-4db7-ab36-6b13bd214f25.png" 
+                  alt="अध्ययन Library Logo" 
+                  className="w-8 h-8 object-contain"
+                />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-blue-900">Civils Lounge - Staff</h1>
+                <h1 className="text-xl font-bold text-blue-900">अध्ययन Library - Staff</h1>
                 <p className="text-sm text-gray-600">Booking Records & Receipt Management</p>
               </div>
             </div>
-            <Button variant="outline" onClick={onLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentView('notice-board')}
+              >
+                <Bell className="w-4 h-4 mr-2" />
+                Notice Board
+              </Button>
+              <Button variant="outline" onClick={onLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -171,55 +163,9 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ onLogout }) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {filteredBookings.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  {searchTerm ? 'No bookings found matching your search.' : 'No confirmed bookings yet.'}
-                </div>
-              ) : (
-                filteredBookings.map((booking) => (
-                  <div key={booking.id} className="border rounded-lg p-6 bg-white">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <div>
-                            <p className="text-sm text-gray-600">Student Name</p>
-                            <p className="font-semibold">{booking.name}</p>
-                            <p className="text-sm text-gray-500">{booking.mobile}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Seat Details</p>
-                            <p className="font-semibold">Seat {booking.seatNumber}</p>
-                            <p className="text-sm text-gray-500">{booking.duration} months</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Duration</p>
-                            <p className="text-sm">{booking.startDate}</p>
-                            <p className="text-sm text-gray-500">to {booking.endDate}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Receipt No.</p>
-                            <p className="font-semibold text-blue-600">{booking.receiptNumber}</p>
-                            <Badge variant="outline" className="mt-1">
-                              Confirmed
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handlePrintReceipt(booking)}
-                        >
-                          <Printer className="w-4 h-4 mr-1" />
-                          Print Receipt
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+              <div className="text-center py-8 text-gray-500">
+                No confirmed bookings yet. All data has been reset.
+              </div>
             </div>
           </CardContent>
         </Card>
