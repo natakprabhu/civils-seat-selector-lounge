@@ -17,8 +17,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Sample credentials for testing
-  const sampleCredentials = [
+  // Sample credentials for testing with proper typing
+  const sampleCredentials: Array<{ mobile: string; role: 'client' | 'admin' | 'staff'; otp: string }> = [
     { mobile: '9999999999', role: 'admin', otp: '1234' },
     { mobile: '8888888888', role: 'staff', otp: '1234' },
     { mobile: '7777777777', role: 'client', otp: '1234' }
@@ -81,19 +81,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         throw new Error('Invalid mobile number or OTP');
       }
 
-      // Store session in localStorage for demo
-      localStorage.setItem('userSession', JSON.stringify({
-        mobile: mobile,
-        role: credentials.role,
-        loginTime: new Date().toISOString()
-      }));
-
       toast({
         title: "Success",
         description: `Logged in successfully as ${credentials.role}`,
       });
 
-      // Call the login callback
+      // Call the login callback with properly typed role
       onLogin(mobile, credentials.role);
       
     } catch (error: any) {
