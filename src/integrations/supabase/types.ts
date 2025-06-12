@@ -9,6 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      booking_status_history: {
+        Row: {
+          booking_id: string | null
+          changed_at: string | null
+          changed_by: string | null
+          id: string
+          new_status: string | null
+          notes: string | null
+          old_status: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_status?: string | null
+          notes?: string | null
+          old_status?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_status?: string | null
+          notes?: string | null
+          old_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_status_history_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "seat_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       library_settings: {
         Row: {
           description: string | null
@@ -38,6 +83,47 @@ export type Database = {
           {
             foreignKeyName: "library_settings_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notices: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          priority: string | null
+          title: string
+          type: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: string | null
+          title: string
+          type?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: string | null
+          title?: string
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notices_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -132,7 +218,7 @@ export type Database = {
           {
             foreignKeyName: "seat_bookings_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -200,6 +286,45 @@ export type Database = {
           {
             foreignKeyName: "seat_change_requests_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_images: {
+        Row: {
+          id: string
+          image_url: string
+          seat_id: string | null
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          id?: string
+          image_url: string
+          seat_id?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          id?: string
+          image_url?: string
+          seat_id?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_images_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: true
+            referencedRelation: "seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_images_uploaded_by_fkey"
+            columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -422,7 +547,7 @@ export type Database = {
       booking_status: "pending" | "approved" | "cancelled" | "expired"
       payment_method: "cash" | "online" | "upi" | "card"
       payment_status: "pending" | "approved" | "rejected"
-      seat_status: "vacant" | "booked" | "maintenance"
+      seat_status: "vacant" | "booked" | "maintenance" | "on_hold"
       transaction_type: "booking" | "extension" | "seat_change" | "refund"
       user_role: "admin" | "staff" | "client"
     }
@@ -543,7 +668,7 @@ export const Constants = {
       booking_status: ["pending", "approved", "cancelled", "expired"],
       payment_method: ["cash", "online", "upi", "card"],
       payment_status: ["pending", "approved", "rejected"],
-      seat_status: ["vacant", "booked", "maintenance"],
+      seat_status: ["vacant", "booked", "maintenance", "on_hold"],
       transaction_type: ["booking", "extension", "seat_change", "refund"],
       user_role: ["admin", "staff", "client"],
     },

@@ -7,26 +7,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { useNotices } from '@/hooks/useNotices';
 import { 
   ArrowLeft, 
   Plus, 
   Calendar, 
   User, 
-  Edit,
-  Trash2,
   AlertCircle,
   Bell
 } from 'lucide-react';
-
-interface Notice {
-  id: string;
-  title: string;
-  content: string;
-  priority: 'low' | 'medium' | 'high';
-  createdAt: string;
-  createdBy: string;
-  type: 'general' | 'urgent' | 'maintenance' | 'event';
-}
 
 interface NoticeBoardProps {
   onBack: () => void;
@@ -34,36 +23,7 @@ interface NoticeBoardProps {
 }
 
 const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) => {
-  const [notices, setNotices] = useState<Notice[]>([
-    {
-      id: '1',
-      title: 'Library Timing Update',
-      content: 'The library will now be open from 6:00 AM to 11:00 PM starting from next Monday. Please plan your study schedule accordingly.',
-      priority: 'medium',
-      createdAt: '2024-01-15',
-      createdBy: 'Admin',
-      type: 'general'
-    },
-    {
-      id: '2',
-      title: 'Maintenance Notice',
-      content: 'AC maintenance will be conducted on Saturday from 2:00 PM to 4:00 PM. Temporary inconvenience is regretted.',
-      priority: 'high',
-      createdAt: '2024-01-14',
-      createdBy: 'Staff',
-      type: 'maintenance'
-    },
-    {
-      id: '3',
-      title: 'New Study Resources Available',
-      content: 'Latest UPSC preparation books and mock test series have been added to the library. Check with the front desk for more details.',
-      priority: 'low',
-      createdAt: '2024-01-13',
-      createdBy: 'Admin',
-      type: 'general'
-    }
-  ]);
-
+  const { notices, loading, addNotice } = useNotices();
   const [showAddNotice, setShowAddNotice] = useState(false);
   const [newNotice, setNewNotice] = useState({
     title: '',
@@ -72,7 +32,7 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) =>
     type: 'general' as const
   });
 
-  const handleAddNotice = () => {
+  const handleAddNotice = async () => {
     if (!newNotice.title.trim() || !newNotice.content.trim()) {
       toast({
         title: "Error",
@@ -82,32 +42,22 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) =>
       return;
     }
 
-    const notice: Notice = {
-      id: Date.now().toString(),
-      title: newNotice.title,
-      content: newNotice.content,
-      priority: newNotice.priority,
-      createdAt: new Date().toISOString().split('T')[0],
-      createdBy: isStaff ? 'Staff' : 'Admin',
-      type: newNotice.type
-    };
-
-    setNotices([notice, ...notices]);
-    setNewNotice({ title: '', content: '', priority: 'medium', type: 'general' });
-    setShowAddNotice(false);
+    const { error } = await addNotice(newNotice);
     
-    toast({
-      title: "Success",
-      description: "Notice has been posted successfully",
-    });
-  };
-
-  const handleDeleteNotice = (id: string) => {
-    setNotices(notices.filter(notice => notice.id !== id));
-    toast({
-      title: "Success",
-      description: "Notice has been deleted",
-    });
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add notice",
+        variant: "destructive"
+      });
+    } else {
+      setNewNotice({ title: '', content: '', priority: 'medium', type: 'general' });
+      setShowAddNotice(false);
+      toast({
+        title: "Success",
+        description: "Notice has been posted successfully",
+      });
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -122,11 +72,19 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) =>
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'urgent': return <AlertCircle className="w-4 h-4" />;
-      case 'maintenance': return <Edit className="w-4 h-4" />;
+      case 'maintenance': return <User className="w-4 h-4" />;
       case 'event': return <Calendar className="w-4 h-4" />;
       default: return <Bell className="w-4 h-4" />;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading notices...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
@@ -190,24 +148,14 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) =>
                       <div className="flex items-center gap-4 text-sm text-slate-400">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          {notice.createdAt}
+                          {new Date(notice.created_at).toLocaleDateString()}
                         </div>
                         <div className="flex items-center gap-1">
                           <User className="w-3 h-3" />
-                          {notice.createdBy}
+                          Admin
                         </div>
                       </div>
                     </div>
-                    {isStaff && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteNotice(notice.id)}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="p-6">

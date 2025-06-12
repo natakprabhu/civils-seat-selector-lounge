@@ -1,11 +1,16 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSeatImages } from '@/hooks/useSeatImages';
 
 interface Seat {
   id: string;
-  number: string;
-  status: 'vacant' | 'booked' | 'waiting_for_approval';
+  seat_number: string;
+  status: 'vacant' | 'booked' | 'maintenance' | 'on_hold';
+  section: string;
+  row_number: string;
+  monthly_rate: number;
 }
 
 interface SeatSelectionProps {
@@ -21,6 +26,8 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   onSeatSelect,
   onConfirmSelection
 }) => {
+  const { getSeatImage } = useSeatImages();
+
   // Define the left section layout (rows A-F with varying seat counts)
   const leftSectionRows = [
     { letter: 'A', seats: ['A1', 'A2'] },
@@ -46,7 +53,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   ];
 
   const getSeatData = (seatNumber: string) => {
-    return seats.find(seat => seat.number === seatNumber);
+    return seats.find(seat => seat.seat_number === seatNumber);
   };
 
   const getSeatStyle = (seatNumber: string) => {
@@ -66,10 +73,22 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
         return 'bg-gradient-to-br from-emerald-400 via-green-500 to-emerald-600 hover:from-emerald-500 hover:to-green-600 text-white cursor-pointer shadow-xl shadow-emerald-500/40 border-2 border-emerald-300 hover:border-emerald-200 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-400/50';
       case 'booked':
         return 'bg-gradient-to-br from-red-500 via-rose-600 to-red-700 text-white cursor-not-allowed shadow-xl shadow-red-500/40 border-2 border-red-400';
-      case 'waiting_for_approval':
+      case 'on_hold':
         return 'bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 text-white cursor-not-allowed shadow-xl shadow-amber-500/40 border-2 border-amber-300';
+      case 'maintenance':
+        return 'bg-gradient-to-br from-slate-500 via-slate-600 to-slate-700 text-white cursor-not-allowed shadow-xl shadow-slate-500/40 border-2 border-slate-400';
       default:
         return 'bg-gradient-to-br from-slate-600 to-slate-700 text-slate-300 border border-slate-500';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'on_hold': return 'On Hold';
+      case 'booked': return 'Booked';
+      case 'vacant': return 'Available';
+      case 'maintenance': return 'Maintenance';
+      default: return 'Unknown';
     }
   };
 
@@ -80,15 +99,29 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
     }
   };
 
-  const SeatComponent = ({ seatNumber }: { seatNumber: string }) => (
-    <div
-      className={`w-12 h-12 m-1 rounded-xl flex items-center justify-center font-bold text-xs transition-all duration-300 ${getSeatStyle(seatNumber)}`}
-      onClick={() => handleSeatClick(seatNumber)}
-      title={`Seat ${seatNumber} - ${getSeatData(seatNumber)?.status || 'Unknown'}`}
-    >
-      {seatNumber}
-    </div>
-  );
+  const SeatComponent = ({ seatNumber }: { seatNumber: string }) => {
+    const seatData = getSeatData(seatNumber);
+    const seatImage = seatData ? getSeatImage(seatData.id) : null;
+    
+    return (
+      <div
+        className={`w-12 h-12 m-1 rounded-xl flex items-center justify-center font-bold text-xs transition-all duration-300 relative group ${getSeatStyle(seatNumber)}`}
+        onClick={() => handleSeatClick(seatNumber)}
+        title={`Seat ${seatNumber} - ${getStatusLabel(seatData?.status || 'unknown')}`}
+      >
+        {seatNumber}
+        {seatImage && (
+          <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
+            <img 
+              src={seatImage} 
+              alt={`Seat ${seatNumber}`}
+              className="w-16 h-16 object-cover rounded-lg border-2 border-white shadow-lg"
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <Card className="w-full bg-gradient-to-br from-slate-900/60 to-slate-800/40 backdrop-blur border border-slate-600/50 rounded-xl shadow-2xl">
@@ -106,7 +139,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             </div>
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/50 backdrop-blur">
               <div className="w-4 h-4 bg-gradient-to-br from-amber-400 to-yellow-500 rounded border border-amber-300 shadow-lg"></div>
-              <span className="text-amber-300">Waiting</span>
+              <span className="text-amber-300">On Hold</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/50 backdrop-blur">
               <div className="w-4 h-4 bg-gradient-to-br from-cyan-400 to-blue-500 rounded border border-cyan-300 shadow-lg"></div>

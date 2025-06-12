@@ -7,7 +7,7 @@ export interface Seat {
   seat_number: string;
   section: string;
   row_number: string;
-  status: 'vacant' | 'booked' | 'maintenance';
+  status: 'vacant' | 'booked' | 'maintenance' | 'on_hold';
   monthly_rate: number;
 }
 
