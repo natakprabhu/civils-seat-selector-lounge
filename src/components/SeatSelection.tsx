@@ -94,8 +94,12 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
 
   const handleSeatClick = (seatNumber: string) => {
     const seatData = getSeatData(seatNumber);
+    console.log('Seat clicked in SeatSelection:', seatNumber, seatData);
     if (seatData && seatData.status === 'vacant') {
+      console.log('Calling onSeatSelect with seat ID:', seatData.id);
       onSeatSelect(seatData.id);
+    } else {
+      console.log('Seat not clickable:', seatData?.status);
     }
   };
 

@@ -15,6 +15,8 @@ import ExtendBooking from './ExtendBooking';
 import MyBookingDetails from './MyBookingDetails';
 import AllTransactions from './AllTransactions';
 import NoticeBoard from './NoticeBoard';
+import { useSeats } from '@/hooks/useSeats';
+import { useBookings } from '@/hooks/useBookings';
 import { 
   LogOut, 
   User, 
@@ -61,54 +63,17 @@ interface BookingData {
   toTime?: string;
 }
 
-const createSeatsData = () => {
-  const seats = [];
-  
-  // Left section seats
-  const leftSeats = [
-    'A1', 'A2',
-    'B1', 'B2', 'B3', 'B4',
-    'C1', 'C2', 'C3', 'C4',
-    'D1', 'D2', 'D3', 'D4',
-    'E1', 'E2', 'E3', 'E4',
-    'F1', 'F2', 'F3', 'F4'
-  ];
-  
-  // Right section seats
-  const rightSeats = [
-    'A5', 'A6', 'A7',
-    'B5', 'B6', 'B7',
-    'C5', 'C6', 'C7',
-    'D5', 'D6', 'D7',
-    'E5', 'E6', 'E7',
-    'F5', 'F6', 'F7',
-    'G5', 'G6', 'G7',
-    'H5', 'H6', 'H7',
-    'I5', 'I6', 'I7',
-    'J5', 'J6', 'J7'
-  ];
-  
-  const allSeatNumbers = [...leftSeats, ...rightSeats];
-  
-  // Create seat objects - all vacant after reset
-  allSeatNumbers.forEach((seatNumber, index) => {
-    seats.push({
-      id: `seat-${seatNumber}`,
-      number: seatNumber,
-      status: 'vacant' as const
-    });
-  });
-  
-  return seats;
-};
-
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'seat-change' | 'transactions' | 'edit-profile' | 'booking-success' | 'my-booking' | 'extend-booking' | 'all-transactions' | 'notice-board'>('dashboard');
   const [selectedSeat, setSelectedSeat] = useState<string>('');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [seats] = useState(() => createSeatsData());
-  const [waitlistPosition] = useState(0); // Reset to 0
+  
+  // Use real Supabase data
+  const { seats, loading: seatsLoading } = useSeats();
+  const { createBooking } = useBookings();
+  
+  const [waitlistPosition] = useState(0);
   const [hasPendingSeatChange, setHasPendingSeatChange] = useState(false);
 
   // Reset user booking data since all data is cleared
@@ -130,9 +95,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     toTime: '9:00 PM'
   });
 
-  // No transactions since data is reset
-  const lastTransaction = null;
-
   const [bookingFormData, setBookingFormData] = useState({
     name: '',
     email: '',
@@ -140,34 +102,61 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     seatId: ''
   });
 
-  // Calculate seat statistics
+  // Calculate seat statistics using real data
   const totalSeats = seats.length;
   const availableSeats = seats.filter(s => s.status === 'vacant').length;
-  const onHoldSeats = seats.filter(s => s.status === 'waiting_for_approval').length;
+  const onHoldSeats = seats.filter(s => s.status === 'on_hold').length;
 
   const handleSeatClick = (seatId: string) => {
+    console.log('Seat clicked:', seatId);
     const seat = seats.find(s => s.id === seatId);
     if (seat && seat.status === 'vacant') {
-      setSelectedSeat(seat.number);
+      setSelectedSeat(seat.seat_number);
       setBookingFormData({
         ...bookingFormData,
-        seatId: seat.number
+        seatId: seat.id
       });
       setShowBookingModal(true);
+    } else {
+      console.log('Seat not available or not found:', seat);
     }
   };
 
   const handleBookingSubmit = async () => {
     try {
+      if (!bookingFormData.name.trim() || !bookingFormData.email.trim() || !bookingFormData.duration) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       console.log('Submitting booking request:', bookingFormData);
+      
+      const durationMonths = parseInt(bookingFormData.duration);
+      const totalAmount = durationMonths * 2500; // ₹2500 per month
+
+      const { error } = await createBooking(bookingFormData.seatId, durationMonths, totalAmount);
+      
+      if (error) {
+        throw error;
+      }
       
       setShowBookingModal(false);
       setCurrentView('booking-success');
       setBookingFormData({ name: '', email: '', duration: '', seatId: '' });
-    } catch (error) {
+      
+      toast({
+        title: "Booking Request Submitted",
+        description: "Your seat booking request has been submitted successfully. Please wait for admin approval.",
+      });
+    } catch (error: any) {
+      console.error('Booking error:', error);
       toast({
         title: "Error",
-        description: "Failed to submit request. Please try again.",
+        description: error.message || "Failed to submit request. Please try again.",
         variant: "destructive"
       });
     }
@@ -274,6 +263,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       <NoticeBoard
         onBack={() => setCurrentView('dashboard')}
       />
+    );
+  }
+
+  if (seatsLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading seats...</div>
+      </div>
     );
   }
 
@@ -547,7 +544,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           <CardContent className="p-6">
             <SeatSelection 
               seats={seats}
-              selectedSeat={selectedSeat ? seats.find(s => s.number === selectedSeat)?.id || null : null}
+              selectedSeat={selectedSeat ? seats.find(s => s.seat_number === selectedSeat)?.id || null : null}
               onSeatSelect={handleSeatClick}
               onConfirmSelection={() => {}}
             />
@@ -562,9 +559,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             <DialogTitle className="text-slate-300">Booking Request</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Show seat image placeholder */}
             <div className="w-full h-32 bg-gradient-to-br from-slate-800 to-slate-700 rounded-lg flex items-center justify-center border border-slate-600">
-              <p className="text-slate-300 font-medium">Seat {bookingFormData.seatId} Image</p>
+              <p className="text-slate-300 font-medium">Seat {selectedSeat} Image</p>
             </div>
             
             <div>
@@ -604,7 +600,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             <div>
               <label className="text-sm font-medium text-slate-300">Selected Seat</label>
               <Input
-                value={`Seat ${bookingFormData.seatId}`}
+                value={`Seat ${selectedSeat}`}
                 readOnly
                 className="bg-slate-700 border-slate-600 text-white"
               />
