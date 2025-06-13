@@ -22,6 +22,7 @@ export const useSeatImages = () => {
         .order('uploaded_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Fetched seat images:', data);
       setSeatImages(data || []);
     } catch (error) {
       console.error('Error fetching seat images:', error);
@@ -32,42 +33,67 @@ export const useSeatImages = () => {
 
   const uploadSeatImage = async (seatId: string, file: File) => {
     try {
+      console.log('Starting upload for seat:', seatId, 'file:', file.name);
+      
       // Upload image to storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${seatId}.${fileExt}`;
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      const fileName = `${seatId}-${Date.now()}.${fileExt}`;
       const filePath = `seat-images/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('seat-images')
-        .upload(filePath, file, { upsert: true });
+      console.log('Uploading to path:', filePath);
 
-      if (uploadError) throw uploadError;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('seat-images')
+        .upload(filePath, file, { 
+          upsert: false,
+          contentType: file.type 
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('Upload successful:', uploadData);
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('seat-images')
         .getPublicUrl(filePath);
 
-      // Save to database
+      console.log('Public URL:', publicUrl);
+
+      // Save to database (remove existing image for this seat first)
+      await supabase
+        .from('seat_images')
+        .delete()
+        .eq('seat_id', seatId);
+
       const { error: dbError } = await supabase
         .from('seat_images')
-        .upsert({
+        .insert({
           seat_id: seatId,
           image_url: publicUrl,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database error:', dbError);
+        throw dbError;
+      }
 
+      console.log('Database insert successful');
       await fetchSeatImages();
       return { error: null };
     } catch (error) {
+      console.error('Upload process error:', error);
       return { error };
     }
   };
 
   const getSeatImage = (seatId: string) => {
-    return seatImages.find(img => img.seat_id === seatId)?.image_url;
+    const image = seatImages.find(img => img.seat_id === seatId);
+    return image?.image_url;
   };
 
   useEffect(() => {

@@ -23,6 +23,8 @@ export const useSeats = () => {
         .order('seat_number');
 
       if (error) throw error;
+      
+      console.log('Fetched seats:', data);
       setSeats(data || []);
     } catch (error) {
       console.error('Error fetching seats:', error);
@@ -44,7 +46,8 @@ export const useSeats = () => {
           schema: 'public',
           table: 'seats'
         },
-        () => {
+        (payload) => {
+          console.log('Seat change detected:', payload);
           fetchSeats();
         }
       )
