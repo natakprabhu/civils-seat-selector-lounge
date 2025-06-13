@@ -35,7 +35,7 @@ export const useBookings = () => {
         .select(`
           *,
           seat:seats(seat_number, section),
-          profile:profiles(full_name, email, mobile)
+          profile:profiles!seat_bookings_user_id_fkey(full_name, email, mobile)
         `)
         .order('requested_at', { ascending: false });
 
