@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getSupportTickets, addTicketResponse, updateTicketStatus as updateTicketStatusHelper } from '@/utils/databaseHelpers';
 
 export interface SupportTicket {
   id: string;
@@ -38,19 +39,14 @@ export const useIssues = () => {
 
   const fetchTickets = async () => {
     try {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select(`
-          *,
-          profile:profiles(full_name, email, mobile),
-          responses:ticket_responses(
-            *,
-            responder_profile:profiles(full_name, email)
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      console.log('Fetching support tickets...');
+      const { data, error } = await getSupportTickets();
+      
+      if (error) {
+        console.error('Error fetching tickets:', error);
+        return;
+      }
+      
       setTickets(data || []);
     } catch (error) {
       console.error('Error fetching tickets:', error);
@@ -61,52 +57,43 @@ export const useIssues = () => {
 
   const addResponse = async (ticketId: string, message: string) => {
     try {
+      console.log('Adding response to ticket:', ticketId);
+      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) throw new Error('User not authenticated');
 
-      const { error } = await supabase
-        .from('ticket_responses')
-        .insert({
-          ticket_id: ticketId,
-          responder_id: user.id,
-          message: message
-        });
+      const { error } = await addTicketResponse({
+        ticket_id: ticketId,
+        responder_id: user.id,
+        message: message
+      });
 
       if (error) throw error;
 
       // Update ticket status to in_progress if it was open
-      await supabase
-        .from('support_tickets')
-        .update({ 
-          status: 'in_progress',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', ticketId)
-        .eq('status', 'open');
+      await updateTicketStatusHelper(ticketId, 'in_progress');
 
       await fetchTickets();
       return { error: null };
     } catch (error) {
+      console.error('Error adding response:', error);
       return { error };
     }
   };
 
   const updateTicketStatus = async (ticketId: string, status: string) => {
     try {
-      const { error } = await supabase
-        .from('support_tickets')
-        .update({ 
-          status: status,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', ticketId);
+      console.log('Updating ticket status:', ticketId, status);
+      
+      const { error } = await updateTicketStatusHelper(ticketId, status);
 
       if (error) throw error;
 
       await fetchTickets();
       return { error: null };
     } catch (error) {
+      console.error('Error updating ticket status:', error);
       return { error };
     }
   };
@@ -125,6 +112,7 @@ export const useIssues = () => {
           table: 'support_tickets'
         },
         () => {
+          console.log('Support ticket change detected');
           fetchTickets();
         }
       )
@@ -136,6 +124,7 @@ export const useIssues = () => {
           table: 'ticket_responses'
         },
         () => {
+          console.log('Ticket response change detected');
           fetchTickets();
         }
       )

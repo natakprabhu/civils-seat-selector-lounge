@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { createSupportTicket } from '@/utils/databaseHelpers';
 import { AlertCircle, Send, ArrowLeft } from 'lucide-react';
 
 interface IssueReportFormProps {
@@ -35,6 +36,8 @@ const IssueReportForm: React.FC<IssueReportFormProps> = ({ onBack }) => {
     setIsSubmitting(true);
 
     try {
+      console.log('Submitting issue report:', formData);
+      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -46,18 +49,21 @@ const IssueReportForm: React.FC<IssueReportFormProps> = ({ onBack }) => {
         return;
       }
 
-      const { error } = await supabase
-        .from('support_tickets')
-        .insert({
-          user_id: user.id,
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          status: 'open'
-        });
+      const { error } = await createSupportTicket({
+        user_id: user.id,
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        status: 'open'
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating support ticket:', error);
+        throw error;
+      }
 
+      console.log('Issue reported successfully');
+      
       toast({
         title: "Issue Reported",
         description: "Your issue has been reported successfully. We'll get back to you soon.",
