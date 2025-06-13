@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, MapPin, CheckCircle, AlertTriangle } from 'lucide-react';
 import SeatSelection from './SeatSelection';
+import { useSeats } from '@/hooks/useSeats';
 
 interface SeatChangeRequestProps {
   currentSeat: string;
@@ -18,21 +19,15 @@ const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
   onBack, 
   onSubmitChange 
 }) => {
+  const { seats, loading } = useSeats();
   const [selectedSeat, setSelectedSeat] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasPendingRequest] = useState(false); // This would come from props/state
 
-  // Mock seat data
-  const seats = [
-    { id: 'seat-A1', number: 'A1', status: 'vacant' as const },
-    { id: 'seat-A2', number: 'A2', status: 'booked' as const },
-    // Add more seats as needed
-  ];
-
   const handleSeatSelect = (seatId: string) => {
     const seat = seats.find(s => s.id === seatId);
     if (seat && seat.status === 'vacant') {
-      setSelectedSeat(seat.number);
+      setSelectedSeat(seat.seat_number);
     }
   };
 
@@ -69,6 +64,14 @@ const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
       setIsSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading seats...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
@@ -129,7 +132,7 @@ const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
             <CardContent className="p-6">
               <SeatSelection 
                 seats={seats}
-                selectedSeat={selectedSeat ? seats.find(s => s.number === selectedSeat)?.id || null : null}
+                selectedSeat={selectedSeat ? seats.find(s => s.seat_number === selectedSeat)?.id || null : null}
                 onSeatSelect={handleSeatSelect}
                 onConfirmSelection={() => {}}
               />

@@ -40,7 +40,31 @@ export const useBookings = () => {
         .order('requested_at', { ascending: false });
 
       if (error) throw error;
-      setBookings(data || []);
+      
+      // Type-safe data processing
+      const processedBookings: BookingRequest[] = (data || []).map(booking => ({
+        id: booking.id,
+        user_id: booking.user_id,
+        seat_id: booking.seat_id,
+        duration_months: booking.duration_months,
+        total_amount: booking.total_amount,
+        status: booking.status,
+        requested_at: booking.requested_at,
+        approved_at: booking.approved_at,
+        approved_by: booking.approved_by,
+        notes: booking.notes,
+        seat: booking.seat ? {
+          seat_number: booking.seat.seat_number,
+          section: booking.seat.section
+        } : undefined,
+        profile: booking.profile ? {
+          full_name: booking.profile.full_name,
+          email: booking.profile.email,
+          mobile: booking.profile.mobile
+        } : undefined
+      }));
+
+      setBookings(processedBookings);
     } catch (error) {
       console.error('Error fetching bookings:', error);
     } finally {

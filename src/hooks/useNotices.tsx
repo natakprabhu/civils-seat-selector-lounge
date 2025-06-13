@@ -26,7 +26,20 @@ export const useNotices = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setNotices(data || []);
+      
+      // Type-safe data processing
+      const processedNotices: Notice[] = (data || []).map(notice => ({
+        id: notice.id,
+        title: notice.title,
+        content: notice.content,
+        priority: notice.priority as 'low' | 'medium' | 'high',
+        type: notice.type as 'general' | 'urgent' | 'maintenance' | 'event',
+        created_at: notice.created_at,
+        created_by: notice.created_by,
+        is_active: notice.is_active
+      }));
+
+      setNotices(processedNotices);
     } catch (error) {
       console.error('Error fetching notices:', error);
     } finally {
