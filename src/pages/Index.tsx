@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import EmailAuthPage from "@/components/EmailAuthPage";
 import ClientDashboard from "@/components/ClientDashboard";
@@ -28,24 +27,15 @@ const Index = () => {
     await signOut();
   };
 
-  // Route based on user role
+  // Render dashboards with dummy data UI only
   switch (userRole) {
     case 'admin':
-      console.log("Rendering AdminDashboard");
       return <AdminDashboard onLogout={handleLogout} />;
     case 'staff':
-      console.log("Rendering StaffDashboard");
       return <StaffDashboard onLogout={handleLogout} />;
     case 'client':
     default:
-      // Log full user object for debug
-      console.log("Rendering ClientDashboard with user", user);
-      return (
-        <ClientDashboard 
-          userMobile={user.email || user.user_metadata?.email || ''} 
-          onLogout={handleLogout} 
-        />
-      );
+      return <ClientDashboard userMobile={"9999999999"} onLogout={handleLogout} />;
   }
 };
 
