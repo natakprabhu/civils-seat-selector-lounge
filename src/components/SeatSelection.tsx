@@ -69,42 +69,47 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   bookings,
   userId,
 }) => {
-  // Find pending seat for this user (for on_hold highlight)
-  let pendingSeatId: string | null = null;
-  if (bookings && userId) {
-    const pendingBooking = bookings.find(
-      (b) => b.user_id === userId && b.status === "pending"
-    );
-    if (pendingBooking) {
-      pendingSeatId = pendingBooking.seat_id;
-    }
+  // For easier lookup by seat_number
+  const seatsByNumber = React.useMemo(() => {
+    return getSeatByNumber(seats);
+  }, [seats]);
+
+  // Find booking for a seat
+  function getBookingStatus(seatId: string): 'pending' | 'approved' | null {
+    const found = bookings.find(b => b.seat_id === seatId && (b.status === "pending" || b.status === "approved"));
+    return found ? found.status : null;
   }
 
-  // For easier lookup by seat_number
-  const seatsByNumber = getSeatByNumber(seats);
-
-  // All users see any on-hold seat as 'pending' regardless of who holds/locked it
   function getSeatStatus(seat: Seat): 'vacant' | 'selected' | 'pending' | 'booked' {
-    if (selectedSeat && seat.id === selectedSeat) return 'selected';
-    if (seat.status === 'booked') return 'booked';
-    if (seat.status === 'on_hold') return 'pending';
-    return 'vacant';
+    // If selected, this has top priority
+    if (selectedSeat && seat.id === selectedSeat) {
+      return 'selected';
+    }
+    // Use booking status from bookings table
+    const bookingStatus = getBookingStatus(seat.id);
+    if (bookingStatus === "pending") {
+      return 'pending';
+    }
+    if (bookingStatus === "approved") {
+      return 'booked';
+    }
+    return "vacant";
   }
 
   // Find vacant seat obj for the currently selected seat
   const selectedVacantSeat =
     selectedSeat && seats.find(
-      s => s.id === selectedSeat && s.status === 'vacant'
+      s => s.id === selectedSeat && getSeatStatus(s) === 'selected'
     );
 
-  // Debug logs for seat statuses
+  // Debug: Log booking + seat computed status mapping
   React.useEffect(() => {
     Object.values(seatsByNumber).forEach(seat => {
       const status = getSeatStatus(seat);
-      // Intentionally log them to spot on_hold seats and status mapping
-      console.log('[SeatStatusDebug] seat', seat.seat_number, 'raw status:', seat.status, '-> computed status:', status);
+      const bookingStatus = getBookingStatus(seat.id);
+      console.log('[SeatStatusDebug]', seat.seat_number, 'booking:', bookingStatus, '-> UI computed status:', status);
     });
-  }, [seats, selectedSeat]);
+  }, [seats, bookings, selectedSeat]);
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -152,7 +157,13 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
                         disabled={bookingInProgress || status !== "vacant"}
                       />
                     </div>
-                    <span className="text-xs mt-0.5 text-slate-400">{status === 'pending' ? 'On Hold' : status.charAt(0).toUpperCase()+status.slice(1)}</span>
+                    <span className="text-xs mt-0.5 text-slate-400">
+                      {
+                        status === 'pending'
+                          ? 'On Hold'
+                          : status.charAt(0).toUpperCase() + status.slice(1)
+                      }
+                    </span>
                   </div>
                 );
               })}
@@ -160,11 +171,13 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
           ))}
           {/* Stairs and Washroom at bottom (below last row "F") */}
           <div className="flex flex-row mt-2 w-full">
+            {/* Stairs */}
             <div className="flex-1 flex items-center justify-center m-1">
               <div className="w-full h-20 bg-gradient-to-t from-slate-400 to-slate-100 border rounded text-sm font-bold flex items-center justify-center shadow box-border text-black">
                 Stairs
               </div>
             </div>
+            {/* Washroom */}
             <div className="flex-1 flex items-center justify-center m-1">
               <div className="w-full h-20 bg-slate-200 border rounded text-sm font-bold flex items-center justify-center shadow box-border text-black">
                 Washroom
@@ -233,7 +246,13 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
                         disabled={bookingInProgress || status !== "vacant"}
                       />
                     </div>
-                    <span className="text-xs mt-0.5 text-slate-400">{status === 'pending' ? 'On Hold' : status.charAt(0).toUpperCase()+status.slice(1)}</span>
+                    <span className="text-xs mt-0.5 text-slate-400">
+                      {
+                        status === 'pending'
+                          ? 'On Hold'
+                          : status.charAt(0).toUpperCase() + status.slice(1)
+                      }
+                    </span>
                   </div>
                 );
               })}
@@ -256,3 +275,5 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
 };
 
 export default SeatSelection;
+
+// NOTE: This file is now very long (over 250 lines)! Consider asking for a refactor into smaller components for maintainability.
