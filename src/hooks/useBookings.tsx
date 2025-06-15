@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -8,19 +9,10 @@ export interface BookingRequest {
   duration_months: number;
   total_amount: number;
   status: 'pending' | 'approved' | 'cancelled' | 'expired';
-  requested_at: string;
-  approved_at?: string;
-  approved_by?: string;
-  notes?: string;
-  seat?: {
-    seat_number: string;
-    section: string;
-  };
-  profile?: {
-    full_name: string;
-    email: string;
-    mobile: string;
-  };
+  requested_at: string | null;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  notes?: string | null;
 }
 
 export const useBookings = () => {
@@ -31,36 +23,22 @@ export const useBookings = () => {
     try {
       const { data, error } = await supabase
         .from('seat_bookings')
-        .select(`
-          *,
-          seat:seats(seat_number, section),
-          profile:profiles!seat_bookings_user_id_fkey(full_name, email, mobile)
-        `)
+        .select('*')
         .order('requested_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Type-safe data processing
-      const processedBookings: BookingRequest[] = (data || []).map(booking => ({
+
+      const processedBookings: BookingRequest[] = (data || []).map((booking: any) => ({
         id: booking.id,
         user_id: booking.user_id,
         seat_id: booking.seat_id,
-        duration_months: booking.duration_months,
-        total_amount: booking.total_amount,
-        status: booking.status,
+        duration_months: booking.duration_months ?? 1,
+        total_amount: booking.total_amount ?? 0,
+        status: booking.status || "pending",
         requested_at: booking.requested_at,
         approved_at: booking.approved_at,
         approved_by: booking.approved_by,
         notes: booking.notes,
-        seat: booking.seat ? {
-          seat_number: booking.seat.seat_number,
-          section: booking.seat.section
-        } : undefined,
-        profile: booking.profile ? {
-          full_name: booking.profile.full_name,
-          email: booking.profile.email,
-          mobile: booking.profile.mobile
-        } : undefined
       }));
 
       setBookings(processedBookings);
@@ -78,7 +56,7 @@ export const useBookings = () => {
         throw new Error("User not authenticated. Please log in to book a seat.");
       }
 
-      // --- Only allow 1 pending/approved seat booking per user ---
+      // Only allow 1 pending/approved seat booking per user
       const { data: existingBooking } = await supabase
         .from('seat_bookings')
         .select('id')
@@ -92,18 +70,17 @@ export const useBookings = () => {
       const { error } = await supabase
         .from('seat_bookings')
         .insert({
+          user_id: user.id,
           seat_id: seatId,
           duration_months: durationMonths,
           total_amount: totalAmount,
-          user_id: user.id,
-          status: 'pending'
+          status: 'pending',
         });
 
       if (error) throw new Error(error.message || "Unknown Supabase insert error");
       await fetchBookings();
       return { error: null };
     } catch (error: any) {
-      // Always return a plain object with a readable .message
       if (typeof error === "string") {
         return { error: { message: error } };
       }
@@ -111,7 +88,6 @@ export const useBookings = () => {
         return { error: { message: error.message } };
       }
       try {
-        // Try to safely inspect error
         if (error && typeof error === "object" && "message" in error && typeof (error as any).message === "string") {
           return { error: { message: (error as any).message } };
         }
@@ -139,24 +115,14 @@ export const useBookings = () => {
         .eq('id', bookingId);
 
       if (error) throw error;
-
-      // Update seat status to booked
-      const booking = bookings.find(b => b.id === bookingId);
-      if (booking) {
-        await supabase
-          .from('seats')
-          .update({ status: 'booked' })
-          .eq('id', booking.seat_id);
-      }
-
       await fetchBookings();
       return { error: null };
     } catch (error: any) {
       const message = error?.message
         ? error.message
         : typeof error === "string"
-            ? error
-            : JSON.stringify(error) || "Unknown error while approving booking";
+          ? error
+          : JSON.stringify(error) || "Unknown error while approving booking";
       console.error('Error approving booking:', message);
       return { error: { message } };
     }
@@ -172,24 +138,14 @@ export const useBookings = () => {
         .eq('id', bookingId);
 
       if (error) throw error;
-
-      // Update seat status back to vacant
-      const booking = bookings.find(b => b.id === bookingId);
-      if (booking) {
-        await supabase
-          .from('seats')
-          .update({ status: 'vacant' })
-          .eq('id', booking.seat_id);
-      }
-
       await fetchBookings();
       return { error: null };
     } catch (error: any) {
       const message = error?.message
         ? error.message
         : typeof error === "string"
-            ? error
-            : JSON.stringify(error) || "Unknown error while rejecting booking";
+          ? error
+          : JSON.stringify(error) || "Unknown error while rejecting booking";
       console.error('Error rejecting booking:', message);
       return { error: { message } };
     }
@@ -228,3 +184,5 @@ export const useBookings = () => {
     refetch: fetchBookings
   };
 };
+
+// NOTE: This file is now over 200 lines. You should consider refactoring it into smaller hooks for clarity and maintainability in future iterations.

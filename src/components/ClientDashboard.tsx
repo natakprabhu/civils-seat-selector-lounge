@@ -90,7 +90,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   
   // Use real Supabase data
-  const { seats, loading: seatsLoading, lockSeat, releaseSeatLock, refetch: refetchSeats } = useSeats();
+  const { seats, loading: seatsLoading, refetch: refetchSeats } = useSeats();
   const { bookings, createBooking, refetch: refetchBookings } = useBookings();
   
   const [waitlistPosition] = useState(0);
@@ -173,13 +173,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     if (!selectedSeatId || !bookingFormDuration || !user?.id) return;
     setIsBookingSubmitting(true);
     try {
-      // Step 1: Lock the seat (add to seat_locks, status on_hold)
-      const { error: lockError } = await lockSeat(selectedSeatId);
-      if (lockError) throw lockError;
-
       const durationMonths = parseInt(bookingFormDuration);
 
-      // Step 2: Create booking (pending, status on_hold)
+      // Step 2: Create booking
       const seat = seats.find(s => s.id === selectedSeatId);
       if (!seat) throw new Error('Seat not found');
       const totalAmount = durationMonths * seat.monthly_rate;
@@ -190,7 +186,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         totalAmount
       );
       if (bookingError) {
-        // Better error message extraction
         const errMsg =
           typeof bookingError === 'string'
             ? bookingError
@@ -214,7 +209,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
       toast({
         title: "Booking Request Submitted",
-        description: "Your seat has been locked for 1 hour. Request will be cancelled automatically if not approved in time.",
+        description: "Your seat booking request has been submitted for approval.",
       });
     } catch (error: any) {
       // Always show error in a human readable way
@@ -243,7 +238,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     if (!myPending) return;
 
     // Release lock and cancel booking
-    await releaseSeatLock(myPending.seat_id);
     await supabase
       .from('seat_bookings')
       .update({ status: 'cancelled' })

@@ -135,27 +135,48 @@ export type Database = {
       }
       seat_bookings: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           booked_at: string
+          duration_months: number | null
           id: string
+          notes: string | null
           payment_reference: string | null
+          requested_at: string | null
           seat_id: string
           show_id: string
+          status: string | null
+          total_amount: number | null
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           booked_at?: string
+          duration_months?: number | null
           id?: string
+          notes?: string | null
           payment_reference?: string | null
+          requested_at?: string | null
           seat_id: string
           show_id: string
+          status?: string | null
+          total_amount?: number | null
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           booked_at?: string
+          duration_months?: number | null
           id?: string
+          notes?: string | null
           payment_reference?: string | null
+          requested_at?: string | null
           seat_id?: string
           show_id?: string
+          status?: string | null
+          total_amount?: number | null
           user_id?: string
         }
         Relationships: []
