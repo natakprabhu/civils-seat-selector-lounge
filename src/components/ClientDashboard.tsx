@@ -90,7 +90,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   
   // Use real Supabase data
-  const { seats, loading: seatsLoading, refetch: refetchSeats } = useSeats();
+  const { seats, loading: seatsLoading, lockSeat, releaseSeatLock, refetch: refetchSeats } = useSeats();
   const { bookings, createBooking, refetch: refetchBookings } = useBookings();
   
   const [waitlistPosition] = useState(0);
@@ -173,12 +173,16 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     if (!selectedSeatId || !bookingFormDuration || !user?.id) return;
     setIsBookingSubmitting(true);
     try {
+      // Step 1: Lock the seat (add to seat_locks, status on_hold)
+      const { error: lockError } = await lockSeat(selectedSeatId);
+      if (lockError) throw lockError;
+
       const durationMonths = parseInt(bookingFormDuration);
 
-      // Step 2: Create booking
+      // Step 2: Create booking (pending, status on_hold)
       const seat = seats.find(s => s.id === selectedSeatId);
       if (!seat) throw new Error('Seat not found');
-      const totalAmount = durationMonths * (seat.monthly_rate ?? 2500);
+      const totalAmount = durationMonths * seat.monthly_rate;
 
       const { error: bookingError } = await createBooking(
         selectedSeatId,
@@ -186,6 +190,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         totalAmount
       );
       if (bookingError) {
+        // Better error message extraction
         const errMsg =
           typeof bookingError === 'string'
             ? bookingError
@@ -209,9 +214,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
       toast({
         title: "Booking Request Submitted",
-        description: "Your seat booking request has been submitted for approval.",
+        description: "Your seat has been locked for 1 hour. Request will be cancelled automatically if not approved in time.",
       });
     } catch (error: any) {
+      // Always show error in a human readable way
       const errMsg =
         typeof error === 'string'
           ? error
@@ -237,6 +243,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     if (!myPending) return;
 
     // Release lock and cancel booking
+    await releaseSeatLock(myPending.seat_id);
     await supabase
       .from('seat_bookings')
       .update({ status: 'cancelled' })
@@ -322,7 +329,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   useEffect(() => {
     if (myBooking) {
       setUserBooking({
-        seatNumber: "", // Remove: myBooking.seat?.seat_number
+        seatNumber: myBooking.seat?.seat_number || "",
         name: profile?.full_name || "User Name",
         mobile: profile?.mobile || userMobile,
         email: profile?.email || "",
@@ -331,7 +338,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         submittedAt: myBooking.requested_at
           ? new Date(myBooking.requested_at).toLocaleString()
           : "",
-        paymentStatus: 'pending',
+        paymentStatus: 'pending', // Fix: Always include this property
         paidAmount: 0,
         validTill: "",
         remainingDays: 0,
@@ -351,7 +358,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         duration: "",
         status: "not_applied",
         submittedAt: "",
-        paymentStatus: 'pending',
+        paymentStatus: 'pending', // Fix: Always include this property
         paidAmount: 0,
         validTill: "",
         remainingDays: 0,
@@ -395,19 +402,16 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
       // Map to transaction format
       const formattedBookings =
-        (bookings || []).map(b => {
-          const seatData = b.seat as { seat_number?: string; section?: string } | null;
-          return {
-            id: b.id,
-            type: 'New Booking' as const,
-            seatNumber: seatData?.seat_number,
-            section: seatData?.section,
-            duration: b.duration_months,
-            totalAmount: b.total_amount,
-            status: b.status,
-            requestedAt: b.requested_at,
-          };
-        });
+        (bookings || []).map(b => ({
+          id: b.id,
+          type: 'New Booking' as const,
+          seatNumber: b.seat?.seat_number,
+          section: b.seat?.section,
+          duration: b.duration_months,
+          totalAmount: b.total_amount,
+          status: b.status,
+          requestedAt: b.requested_at,
+        }));
 
       // Fetch seat change requests for user
       const { data: changes } = await supabase
