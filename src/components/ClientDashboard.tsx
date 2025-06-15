@@ -396,23 +396,12 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       // Map to transaction format
       const formattedBookings =
         (bookings || []).map(b => {
-          let seatNumber: string | undefined = undefined;
-          let section: string | undefined = undefined;
-          if (
-            b.seat != null &&
-            typeof b.seat === "object" &&
-            "seat_number" in b.seat &&
-            "section" in b.seat
-          ) {
-            // b.seat is not null and has these properties
-            seatNumber = b.seat && (b.seat as { seat_number?: string }).seat_number;
-            section = b.seat && (b.seat as { section?: string }).section;
-          }
+          const seatData = b.seat as { seat_number?: string; section?: string } | null;
           return {
             id: b.id,
             type: 'New Booking' as const,
-            seatNumber,
-            section,
+            seatNumber: seatData?.seat_number,
+            section: seatData?.section,
             duration: b.duration_months,
             totalAmount: b.total_amount,
             status: b.status,
