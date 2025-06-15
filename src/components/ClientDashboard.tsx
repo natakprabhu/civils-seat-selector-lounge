@@ -37,6 +37,7 @@ import {
   ArrowRight,
   Bell
 } from 'lucide-react';
+import { ToastAction } from '@/components/ui/toast';
 
 interface ClientDashboardProps {
   userMobile: string;
@@ -122,10 +123,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         description:
           "You already have an active or pending seat booking. Please contact admin to approve/cancel or cancel your request from 'My Booking' section.",
         variant: "destructive",
-        action: {
-          label: "Go to My Booking",
-          onClick: () => setCurrentView("my-booking")
-        }
+        action: (
+          <ToastAction altText="Go to My Booking" onClick={() => setCurrentView("my-booking")}>
+            Go to My Booking
+          </ToastAction>
+        ),
       });
       return;
     }
