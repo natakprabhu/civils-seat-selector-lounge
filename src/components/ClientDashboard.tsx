@@ -186,11 +186,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     console.log("[Booking Submit] Booking payload:", {
       user_id: user.id,
       seat_id: seat.id,
-      // show_id: removed
       duration_months: details.duration,
       status: "pending"
     });
 
+    // Only insert fields that exist in seat_bookings now (no show_id)
     const { error } = await supabase.from("seat_bookings").insert({
       user_id: user.id,
       seat_id: seat.id,
