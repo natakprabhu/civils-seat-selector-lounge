@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -136,6 +135,8 @@ const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
                 onSeatSelect={handleSeatSelect}
                 onConfirmSelection={() => {}}
                 bookingInProgress={false}
+                bookings={[]}   // <-- Pass an empty array; customize as needed if seat change requests should reference bookings
+                userId={undefined} // <-- Pass undefined or get userId if available here
               />
               
               {selectedSeat && (

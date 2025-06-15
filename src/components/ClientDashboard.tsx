@@ -297,6 +297,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         submittedAt: myBooking.requested_at
           ? new Date(myBooking.requested_at).toLocaleString()
           : "",
+        paymentStatus: 'pending', // Fix: Always include this property
+        paidAmount: 0,
+        validTill: "",
+        remainingDays: 0,
+        startDate: "",
+        planDetails: "",
+        fromTime: "9:00 AM",
+        toTime: "9:00 PM"
       });
     }
     // If no booking, clear details
@@ -309,6 +317,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         duration: "",
         status: "not_applied",
         submittedAt: "",
+        paymentStatus: 'pending', // Fix: Always include this property
+        paidAmount: 0,
+        validTill: "",
+        remainingDays: 0,
+        startDate: "",
+        planDetails: "",
+        fromTime: "9:00 AM",
+        toTime: "9:00 PM"
       });
     }
   }, [myBooking, profile, userMobile]);
@@ -709,6 +725,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               onSeatSelect={handleSeatSelect}
               onConfirmSelection={handleConfirmSelection}
               bookingInProgress={hasActiveBooking}
+              bookings={bookings}
+              userId={user?.id}
             />
             {hasActiveBooking && (
               <p className="mt-4 text-yellow-300 text-sm">
