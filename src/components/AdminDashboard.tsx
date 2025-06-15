@@ -268,13 +268,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     <div className="grid md:grid-cols-5 gap-4 items-center">
                       <div>
                         <p className="text-sm text-slate-400">User Details</p>
-                        <p className="font-semibold text-white">{request.profile?.full_name}</p>
-                        <p className="text-sm text-slate-500">{request.profile?.email}</p>
-                        <p className="text-sm text-slate-500">{request.profile?.mobile}</p>
+                        <p className="font-semibold text-white">{request.profile?.full_name || 'Unknown'}</p>
+                        <p className="text-sm text-slate-500">{request.profile?.email || ''}</p>
+                        <p className="text-sm text-slate-500">{request.profile?.mobile || ''}</p>
                       </div>
                       <div>
                         <p className="text-sm text-slate-400">Seat & Duration</p>
-                        <p className="font-semibold text-white">Seat {request.seat?.seat_number}</p>
+                        <p className="font-semibold text-white">Seat {request.seat?.seat_number || '-'}</p>
                         <p className="text-sm text-slate-500">{request.duration_months} months</p>
                       </div>
                       <div>
