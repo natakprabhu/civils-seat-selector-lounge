@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from '@/hooks/use-toast';
 import { Phone } from 'lucide-react';
+import { useAuth } from "@/hooks/useAuth";
 
 interface AuthPageProps {
   onLogin: (mobile: string, userType: 'client' | 'admin' | 'staff') => void;
@@ -16,6 +16,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const [otp, setOtp] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
 
   // Sample credentials for testing with proper typing
   const sampleCredentials: Array<{ mobile: string; role: 'client' | 'admin' | 'staff'; otp: string }> = [
@@ -74,26 +75,48 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      // Find matching credentials
-      const credentials = sampleCredentials.find(cred => cred.mobile === mobile);
-      
-      if (!credentials || otp !== credentials.otp) {
-        throw new Error('Invalid mobile number or OTP');
+      // For this demo, OTP is always 1234.
+      if (otp !== "1234") {
+        throw new Error('Invalid OTP');
       }
 
+      // Attempt login; if fails with invalid, register and then login
+      let loginResult = await signIn(mobile, "client");
+
+      // If error and it's invalid user, try to register
+      if (loginResult.error && 
+          loginResult.error.message &&
+          loginResult.error.message.toLowerCase().includes('invalid')) {
+        // Try register
+        // signIn will handle registration in useAuth logic, so just call again
+        loginResult = await signIn(mobile, "client");
+      }
+
+      if (loginResult.error) {
+        throw loginResult.error;
+      }
+
+      // Login or registration successful.
       toast({
         title: "Success",
-        description: `Logged in successfully as ${credentials.role}`,
+        description: `Welcome! You're logged in.`,
       });
 
-      // Call the login callback with properly typed role
-      onLogin(mobile, credentials.role);
-      
+      // Advise to edit profile for new users (first login)
+      setTimeout(() => {
+        toast({
+          title: "Complete your profile",
+          description: "Please add your email address and name in your profile.",
+        });
+      }, 1000);
+
+      // Call the login callback
+      onLogin(mobile, "client");
     } catch (error: any) {
       console.error('Login error:', error);
       toast({
         title: "Error",
-        description: error.message || "Login failed",
+        description: error.message || "Login/Registration failed",
         variant: "destructive"
       });
     } finally {
