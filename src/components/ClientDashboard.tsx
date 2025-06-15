@@ -72,6 +72,9 @@ import { supabase } from "@/integrations/supabase/client";
 import BookingDialog from './BookingDialog';
 import { toast } from '@/hooks/use-toast';
 
+// 👇 Add your test show UUID here. Replace with an actual UUID from your shows table.
+const TEST_SHOW_UUID = '00000000-0000-0000-0000-000000000000'; // <-- Replace this with a real show uuid!
+
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const { user } = useAuth();
   const { seats, loading: seatsLoading } = useSeats();
@@ -137,7 +140,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
   const handleBookingSubmit = async (details: { name: string; email: string; mobile: string; seatNumber: string; duration: number }) => {
     setFormLoading(true);
-    // Find matching seat row by seat number (now mapped to real UUID)
     const seat = seats.find(s => s.seat_number === details.seatNumber);
     if (!seat || !user) {
       setFormLoading(false);
@@ -148,11 +150,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       });
       return;
     }
-    // HACK: Use a hardcoded 'default-show' for show_id, replace as per real logic
+    // ⬇️ Insert using a real/test show UUID
     const { error } = await supabase.from("seat_bookings").insert({
       user_id: user.id,
       seat_id: seat.id,
-      show_id: 'default-show', // <-- replace with a real UUID if available
+      show_id: TEST_SHOW_UUID,
       duration_months: details.duration,
       status: "pending"
     });
