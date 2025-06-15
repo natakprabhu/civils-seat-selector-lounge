@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,10 +11,10 @@ export function useOtpRegistration() {
   const registerWithOtp = async (email: string, password: string) => {
     setLoading(true);
     setSignupError(null);
-    // Use absolute URL to Supabase edge function
     try {
+      // Use relative URL so Lovable preview/dev and prod both work
       const response = await fetch(
-        "https://llvujxdmzuyebkzuutqn.supabase.co/functions/v1/send-otp-email",
+        "/functions/v1/send-otp-email",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -25,9 +26,11 @@ export function useOtpRegistration() {
         setLoading(false);
         return true;
       } else {
-        let data;
+        // Protect against non-JSON body (like 404 HTML)
+        let data: any = {};
+        const text = await response.text();
         try {
-          data = await response.json();
+          data = JSON.parse(text);
         } catch {
           data = { error: "Failed to get error details from server" };
         }
@@ -103,3 +106,4 @@ export function useOtpRegistration() {
 
   return { step, loading, signupError, registerWithOtp, validateOtpAndRegister, reset };
 }
+
