@@ -68,6 +68,9 @@ const DUMMY_BOOKING: BookingData = {
   toTime: '9:00 PM'
 };
 
+import { supabase } from "@/integrations/supabase/client";
+import BookingDialog from './BookingDialog';
+
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const { user } = useAuth();
   const { seats, loading: seatsLoading } = useSeats();
@@ -77,6 +80,76 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [userBooking, setUserBooking] = useState<BookingData>(DUMMY_BOOKING);
   const [waitlistPosition] = useState(0);
   const [hasPendingSeatChange] = useState(false);
+
+  // NEW
+  const [bookings, setBookings] = React.useState<{ seat_id: string, status: "pending" | "approved", user_id: string }[]>([]);
+  const [bookingsLoading, setBookingsLoading] = React.useState(true);
+  const [selectedSeat, setSelectedSeat] = React.useState<string | null>(null);
+  const [showDialog, setShowDialog] = React.useState(false);
+  const [formLoading, setFormLoading] = React.useState(false);
+
+  // Assume `user` contains user id or email to identify current user for bookings
+  const userId = user?.id;
+  const userEmail = user?.email || userMobile;
+
+  React.useEffect(() => {
+    // Fetch all seat bookings for status pending/approved
+    const fetchBookings = async () => {
+      setBookingsLoading(true);
+      const { data, error } = await supabase
+        .from("seat_bookings")
+        .select("seat_id, status, user_id")
+        .in("status", ["pending", "approved"]);
+      setBookingsLoading(false);
+      if (data) setBookings(data);
+      else setBookings([]);
+    };
+    fetchBookings();
+  }, []);
+
+  // Only allow booking if user has no pending/approved booking
+  const userActiveBooking = bookings.some(
+    (b) => (b.user_id === userId) && (b.status === "pending" || b.status === "approved")
+  );
+
+  const handleSeatSelect = (seat: string) => {
+    setSelectedSeat(seat);
+    setShowDialog(true);
+  };
+
+  const handleDialogClose = () => {
+    setShowDialog(false);
+    setSelectedSeat(null);
+  };
+
+  const handleBookingSubmit = async (details: { name: string; email: string; mobile: string; seatNumber: string; duration: number }) => {
+    setFormLoading(true);
+    // Find matching seat row by seat number
+    const seat = seats.find(s => s.seat_number === details.seatNumber);
+    if (!seat || !user) {
+      setFormLoading(false);
+      return;
+    }
+    // Insert seat_booking with status 'pending'
+    const { error } = await supabase.from("seat_bookings").insert({
+      user_id: user.id,
+      seat_id: seat.id,
+      duration_months: details.duration,
+      status: "pending"
+    });
+    setFormLoading(false);
+    if (!error) {
+      // Refresh bookings
+      const { data: newBookings } = await supabase
+        .from("seat_bookings")
+        .select("seat_id, status, user_id")
+        .in("status", ["pending", "approved"]);
+      if (newBookings) setBookings(newBookings);
+      setShowDialog(false);
+      setSelectedSeat(null);
+    }
+    // TODO: Show error notification if booking fails
+  };
 
   // Dummy stats calculation
   const totalSeats = seats.length;
@@ -160,7 +233,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     );
   }
 
-  if (seatsLoading) {
+  if (seatsLoading || bookingsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 flex items-center justify-center">
         <div className="text-white">Loading seats...</div>
@@ -463,7 +536,21 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             <CardTitle className="text-xl font-bold text-white">Live Seat Map</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <SeatSelection seats={seats} />
+            <SeatSelection
+              seats={seats}
+              bookings={bookings}
+              userActiveBooking={userActiveBooking}
+              selectedSeat={selectedSeat}
+              onSeatSelect={handleSeatSelect}
+            />
+            {/* Confirm Detail Dialog */}
+            <BookingDialog
+              open={showDialog}
+              onClose={handleDialogClose}
+              onSubmit={handleBookingSubmit}
+              seatNumber={selectedSeat || ""}
+              loading={formLoading}
+            />
           </CardContent>
         </Card>
       </div>
