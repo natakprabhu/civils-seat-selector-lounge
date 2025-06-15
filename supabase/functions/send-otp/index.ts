@@ -8,23 +8,26 @@ const corsHeaders = {
 };
 
 function normalizeIndianMobileNumber(mobile: string): string | null {
-  // Remove all non-digit chars, except lead +
+  // Remove all non-digit chars, except leading +
   let cleaned = mobile.trim().replace(/[\s\-()]/g, "");
-  if (cleaned.startsWith("+91") && cleaned.length === 13) {
-    return cleaned;
-  }
-  if (cleaned.startsWith("0") && cleaned.length === 11) {
-    // e.g. 09220740805 -> +919220740805
-    return "+91" + cleaned.slice(1);
-  }
-  if (/^\d{10}$/.test(cleaned)) {
-    // Plain 10-digit mobile
+
+  // Allow plain 10-digit Indian numbers only if they start with 6-9
+  if (/^[6-9]\d{9}$/.test(cleaned)) {
     return "+91" + cleaned;
   }
-  if (/^\+91\d{10}$/.test(cleaned)) {
+  // Allow 0-prefixed Indian numbers only if the second digit is 6-9
+  if (/^0[6-9]\d{9}$/.test(cleaned)) {
+    return "+91" + cleaned.slice(1);
+  }
+  // Allow numbers already in +91 E.164 form
+  if (/^\+91[6-9]\d{9}$/.test(cleaned)) {
     return cleaned;
   }
-  // If they paste a + number that's not +91 (e.g. +92 for Pakistan), reject it
+  // Reject any number with a + but not +91
+  if (/^\+\d+/.test(cleaned) && !cleaned.startsWith("+91")) {
+    return null;
+  }
+  // Any other pattern is not valid for Indian mobile
   return null;
 }
 
