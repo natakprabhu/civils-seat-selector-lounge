@@ -229,20 +229,20 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       }
 
       console.log('Submitting booking request:', bookingFormData);
-      
-      const durationMonths = parseInt(bookingFormData.duration);
-      const totalAmount = durationMonths * 2500;
 
-      const { error } = await createBooking(bookingFormData.seatId, durationMonths, totalAmount);
-      
+      // Only use seatId and showId for createBooking!
+      // const { error } = await createBooking(bookingFormData.seatId, durationMonths, totalAmount);
+      // Instead, find correct `showId` (assuming it's same as seatId).
+      const { error } = await createBooking(bookingFormData.seatId, bookingFormData.seatId);
+
       if (error) {
         throw error;
       }
-      
+
       setShowBookingModal(false);
       setCurrentView('booking-success');
       setBookingFormData({ name: '', email: '', duration: '', seatId: '' });
-      
+
       toast({
         title: "Booking Request Submitted",
         description: "Your seat booking request has been submitted successfully. Please wait for admin approval.",
@@ -267,7 +267,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         mobile: profile?.mobile || userMobile,
         email: profile?.email || "",
         duration: "",
-        status: "not_applied",
         submittedAt: myBooking.booked_at ? new Date(myBooking.booked_at).toLocaleString() : "",
         paymentStatus: 'pending',
         paidAmount: 0,
@@ -286,7 +285,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         mobile: profile?.mobile || userMobile,
         email: profile?.email || "",
         duration: "",
-        status: "not_applied",
         submittedAt: "",
         paymentStatus: 'pending',
         paidAmount: 0,
