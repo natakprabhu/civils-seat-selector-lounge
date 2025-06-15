@@ -1,4 +1,3 @@
-
 import React from 'react';
 import SeatIcon from './SeatIcon';
 import { Seat } from '@/hooks/useSeats';
@@ -68,20 +67,14 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   // For easier lookup by seat_number
   const seatsByNumber = getSeatByNumber(seats);
 
-  /** Helper to get status for seat (selected, vacant, on_hold, booked) */
+  // All users see any on-hold seat as 'pending' regardless of who holds/locked it
   function getSeatStatus(seat: Seat): 'vacant' | 'selected' | 'pending' | 'booked' {
-    // Selected in this UI
     if (selectedSeat && seat.id === selectedSeat) return 'selected';
-    // Pending for this user
-    if (pendingSeatId && seat.id === pendingSeatId && seat.status !== 'booked') return 'pending';
-    // Underlying status
     if (seat.status === 'booked') return 'booked';
     if (seat.status === 'on_hold') return 'pending';
     return 'vacant';
   }
 
-  // Aisle label styling using tailwind: rotate, vertical writing, faded
-  // Stairs and Washroom boxes
   return (
     <div className="w-full flex justify-center items-stretch mt-2 gap-4 flex-wrap">
       {/* Left block */}
@@ -91,7 +84,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             {row.map((seatNum) => {
               const seat = seatsByNumber[seatNum];
               if (!seat) {
-                // Render placeholder (empty/filler seat)
+                // placeholder for missing seat
                 return (
                   <div
                     key={seatNum}
@@ -117,15 +110,15 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             })}
           </div>
         ))}
-        {/* Stairs and Washroom at bottom */}
+        {/* Stairs and Washroom at bottom (below last row "F") */}
         <div className="flex flex-row mt-2 w-full">
           <div className="flex-1 flex items-center justify-center m-1">
-            <div className="w-full h-16 bg-gradient-to-t from-slate-400 to-slate-100 border rounded text-sm font-bold flex items-center justify-center shadow box-border">
+            <div className="w-full h-20 bg-gradient-to-t from-slate-400 to-slate-100 border rounded text-sm font-bold flex items-center justify-center shadow box-border text-black">
               Stairs
             </div>
           </div>
           <div className="flex-1 flex items-center justify-center m-1">
-            <div className="w-full h-16 bg-slate-200 border rounded text-sm font-bold flex items-center justify-center shadow box-border">
+            <div className="w-full h-20 bg-slate-200 border rounded text-sm font-bold flex items-center justify-center shadow box-border text-black">
               Washroom
             </div>
           </div>
@@ -134,11 +127,23 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
       {/* Aisle */}
       <div className="relative flex flex-col mx-2">
         <div className="flex-1" />
-        <div className="w-12 flex items-center justify-center">
-          <span className="writing-vertical font-bold text-slate-400 text-base"
-            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
-            Aisle
-          </span>
+        <div className="w-12 flex flex-col items-center justify-center gap-2 py-6">
+          {/* Display multiple "Aisle" labels down the passage */}
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <span
+              key={idx}
+              className="writing-vertical font-bold text-slate-400 text-base"
+              style={{
+                writingMode: "vertical-rl",
+                transform: "rotate(180deg)",
+                letterSpacing: 2,
+                margin: 0,
+                lineHeight: 1.2,
+              }}
+            >
+              Aisle
+            </span>
+          ))}
         </div>
         <div className="absolute inset-y-0 left-1 w-0.5 bg-gray-300 rounded" />
         <div className="absolute inset-y-0 right-1 w-0.5 bg-gray-300 rounded" />
