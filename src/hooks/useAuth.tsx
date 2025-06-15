@@ -49,8 +49,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const verifyOtp = async (mobile: string, otp: string) => {
-    // ADMIN BYPASS: allow logging in as admin with code 0000
-    if (mobile === "9999999999" && otp === "0000") {
+    // ADMIN BYPASS: allow logging in as admin with 6-digit code 000000
+    if (mobile === "9999999999" && otp === "000000") {
       setUser({ mobile, role: "admin" });
       setLoading(false);
       return { error: null };
