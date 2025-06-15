@@ -6,7 +6,7 @@ import AdminDashboard from "@/components/AdminDashboard";
 import StaffDashboard from "@/components/StaffDashboard";
 
 const Index = () => {
-  const { user, userRole, loading, signIn, signOut } = useAuth();
+  const { user, userRole, loading, signOut } = useAuth();
 
   // Debug logs for state
   console.log("INDEX_PAGE_STATE:", { user, userRole, loading });
@@ -20,7 +20,7 @@ const Index = () => {
   }
 
   if (!user) {
-    return <AuthPage onLogin={signIn} />;
+    return <AuthPage />;
   }
 
   const handleLogout = async () => {
@@ -45,4 +45,3 @@ const Index = () => {
 };
 
 export default Index;
-
