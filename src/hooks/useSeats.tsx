@@ -58,11 +58,15 @@ export const useSeats = () => {
     };
   }, []);
 
-  // Helper to get current user id
+  // Helper to get current user id and ensure it's defined
   const getUserId = async () => {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) {
       console.error('No supabase user found', error);
+      return null;
+    }
+    if (!data.user.id) {
+      console.error("User has no id (possible signup before profile trigger runs)");
       return null;
     }
     return data.user.id;
@@ -74,7 +78,8 @@ export const useSeats = () => {
 
     const userId = await getUserId();
     if (!userId) {
-      return { error: { message: "User not authenticated." } };
+      console.error("User not authenticated or user id not ready during lockSeat");
+      return { error: { message: "User not authenticated, or profile not created yet. Try refreshing or re-logging in." } };
     }
 
     const { error } = await supabase
@@ -84,6 +89,11 @@ export const useSeats = () => {
         expires_at: expiresAt.toISOString(),
         user_id: userId
       });
+
+    if (error && error.message.includes("violates foreign key constraint")) {
+      console.error("Foreign key error: profile not created yet for user, try waiting a few seconds after signup.", error);
+      return { error: { message: "Your profile is being set up. Please wait a few seconds and try again, or refresh and re-login." } };
+    }
 
     return { error };
   };
