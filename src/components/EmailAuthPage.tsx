@@ -5,7 +5,6 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Mail, Lock, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOtpRegistration } from "@/hooks/useOtpRegistration";
 
 type Mode = "login" | "signup" | "forgot";
 
@@ -15,23 +14,20 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [errorText, setErrorText] = useState<string | null>(null);
 
-  // Add OTP registration hook/logic for signup
-  const {
-    step,
-    loading: otpLoading,
-    signupError,
-    registerWithOtp,
-    validateOtpAndRegister,
-    reset: resetOtpFlow,
-  } = useOtpRegistration();
-
-  // Repurpose signup mode to use OTP flow
-  const [otpInput, setOtpInput] = useState("");
-
-  // Helper: handle auth result & show toasts
+  // Helper: handle auth result & show toasts and user feedback
   const handleAuthResult = ({ error }: { error: any }) => {
     if (error) {
+      // Show clearer error if not verified
+      if (
+        (error.message || "").toLowerCase().includes("email not confirmed") ||
+        (error.message || "").toLowerCase().includes("user has not confirmed their email address")
+      ) {
+        setErrorText("You must verify your email before logging in. Please check your inbox (and spam folder) for the verification email.");
+      } else {
+        setErrorText(error.message);
+      }
       toast({
         title: "Authentication Error",
         description: error.message,
@@ -42,45 +38,38 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
         title: "Success",
         description:
           mode === "signup"
-            ? "Signup link sent! Check your email to verify."
+            ? "Verification email sent! Check your inbox to verify your account."
             : mode === "forgot"
             ? "Password reset email sent. Check your inbox."
             : "Login successful.",
       });
       if (mode === "login") {
-        onAuth(); // trigger reload/app state
+        onAuth();
       }
       if (mode !== "login") setMessage("Check your inbox for further instructions.");
     }
   };
 
-  // New submit handler, splits between login/forgot/otp-signup sub-flows
+  // Main submit handler (no OTP, standard flows)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (mode === "signup") {
-      if (step === "form") {
-        // Send OTP
-        await registerWithOtp(email, password);
-      } else if (step === "otp") {
-        // Validate OTP and register
-        const success = await validateOtpAndRegister(email, password, otpInput);
-        if (success) {
-          toast({
-            title: "Registration successful",
-            description: "You can now log in with your credentials.",
-          });
-          setMode("login");
-          resetOtpFlow();
-        }
-      }
-      return;
-    }
-
     setMessage("");
+    setErrorText(null);
     setLoading(true);
     try {
-      if (mode === "login") {
+      if (mode === "signup") {
+        // Use Supabase's built-in email verification (emailRedirectTo REQUIRED)
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: window.location.origin + "/" },
+        });
+        handleAuthResult({ error });
+        if (!error) {
+          setMode("login");
+        }
+      } else if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -103,10 +92,11 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
     }
   };
 
-  // Reset form fields on mode switch
+  // Reset password field and messages on mode change
   React.useEffect(() => {
     setMessage("");
     setPassword("");
+    setErrorText(null);
   }, [mode]);
 
   return (
@@ -126,70 +116,48 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
           </CardHeader>
           <CardContent className="space-y-5 px-8 pb-8">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === "signup" && step === "otp" ? (
-                <>
-                  <div>
-                    <label className="text-sm text-slate-300 font-medium">
-                      Enter the OTP sent to your email
-                    </label>
+              <div>
+                <label className="text-sm text-slate-300 font-medium">
+                  Email
+                </label>
+                <div className="mt-1 relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <Input
+                    type="email"
+                    className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+              {mode !== "forgot" && (
+                <div>
+                  <label className="text-sm text-slate-300 font-medium">
+                    Password
+                  </label>
+                  <div className="mt-1 relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                     <Input
-                      type="text"
-                      className="pl-3 h-12 text-base bg-slate-800 border-slate-600 text-white tracking-widest text-center"
-                      placeholder="Enter OTP"
-                      value={otpInput}
-                      onChange={e => setOtpInput(e.target.value)}
+                      type="password"
+                      className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      autoComplete={
+                        mode === "login"
+                          ? "current-password"
+                          : "new-password"
+                      }
                       required
-                      disabled={loading || otpLoading}
-                      maxLength={6}
+                      minLength={6}
+                      disabled={loading}
                     />
                   </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="text-sm text-slate-300 font-medium">
-                      Email
-                    </label>
-                    <div className="mt-1 relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                      <Input
-                        type="email"
-                        className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
-                        placeholder="Enter your email"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        autoComplete="email"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-                  {mode !== "forgot" && (
-                    <div>
-                      <label className="text-sm text-slate-300 font-medium">
-                        Password
-                      </label>
-                      <div className="mt-1 relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                        <Input
-                          type="password"
-                          className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
-                          placeholder="Enter your password"
-                          value={password}
-                          onChange={e => setPassword(e.target.value)}
-                          autoComplete={
-                            mode === "login"
-                              ? "current-password"
-                              : "new-password"
-                          }
-                          required
-                          minLength={6}
-                          disabled={loading}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </>
+                </div>
               )}
               <Button
                 type="submit"
@@ -197,23 +165,20 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
                 disabled={
                   loading ||
                   !email ||
-                  (mode !== "forgot" && !password) ||
-                  (mode === "signup" && step === "otp" && !otpInput)
+                  (mode !== "forgot" && !password)
                 }
               >
                 {loading && <Loader2 className="animate-spin mr-2" />}
                 {mode === "login"
                   ? "Log in"
                   : mode === "signup"
-                  ? step === "otp"
-                    ? "Validate OTP & Register"
-                    : "Create account"
+                  ? "Create account"
                   : "Send reset link"}
               </Button>
             </form>
-            {signupError && (
+            {errorText && (
               <div className="text-sm text-center text-red-400">
-                {signupError}
+                {errorText}
               </div>
             )}
             {message && (
@@ -247,10 +212,7 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
                   <button
                     className="text-blue-400 hover:underline"
                     type="button"
-                    onClick={() => {
-                      setMode("login");
-                      resetOtpFlow();
-                    }}
+                    onClick={() => setMode("login")}
                   >
                     Log in
                   </button>
