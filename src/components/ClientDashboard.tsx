@@ -295,24 +295,20 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   };
 
   // Find current user's latest booking (pending/approved)
-  const myBooking = bookings.find(
-    b => b.user_id === user?.id && (b.status === "pending" || b.status === "approved")
-  );
+  const myBooking = bookings.find(b => b.user_id === user?.id);
 
   // Set up userBooking object for MyBookingDetails:
   useEffect(() => {
     if (myBooking) {
       setUserBooking({
-        seatNumber: myBooking.seat?.seat_number || "",
+        seatNumber: myBooking.seat_id || "",
         name: profile?.full_name || "User Name",
         mobile: profile?.mobile || userMobile,
         email: profile?.email || "",
-        duration: myBooking.duration_months ? `${myBooking.duration_months} Month${myBooking.duration_months > 1 ? "s" : ""}` : "",
-        status: myBooking.status as "not_applied" | "pending" | "approved",
-        submittedAt: myBooking.requested_at
-          ? new Date(myBooking.requested_at).toLocaleString()
-          : "",
-        paymentStatus: 'pending', // Fix: Always include this property
+        duration: "", // Duration not available
+        status: "not_applied", // No booking status: deprecated
+        submittedAt: myBooking.booked_at ? new Date(myBooking.booked_at).toLocaleString() : "",
+        paymentStatus: 'pending',
         paidAmount: 0,
         validTill: "",
         remainingDays: 0,
@@ -332,7 +328,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         duration: "",
         status: "not_applied",
         submittedAt: "",
-        paymentStatus: 'pending', // Fix: Always include this property
+        paymentStatus: 'pending',
         paidAmount: 0,
         validTill: "",
         remainingDays: 0,
@@ -602,11 +598,19 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     return nowMs - requestedMs <= 30 * 60 * 1000; // 30 min in ms
   }
 
-  const filteredUserTransactions = userTransactions.filter(
-    txn =>
-      (!txn.requestedAt || isTransactionWithinThirtyMinutes(txn.requestedAt)) ||
-      txn.status !== "pending"
-  );
+  const filteredUserTransactions = bookings
+    .filter(b => b.user_id === user?.id)
+    .map(b => ({
+      id: b.id,
+      type: 'New Booking' as const,
+      seatNumber: b.seat_id,
+      section: '',
+      duration: undefined,
+      totalAmount: undefined,
+      status: '', // No status anymore
+      requestedAt: b.booked_at,
+      description: "",
+    }));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
