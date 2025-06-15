@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,10 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Mail, Lock, Loader2, User, Smartphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import SignupExtraFields from "./auth/SignupExtraFields";
+import EmailInput from "./auth/EmailInput";
+import PasswordInput from "./auth/PasswordInput";
+import SwitchAuthModeLinks from "./auth/SwitchAuthModeLinks";
 
 type Mode = "login" | "signup" | "forgot";
 
@@ -156,90 +159,21 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
             )}
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "signup" && (
-                <>
-                  <div>
-                    <label className="text-sm text-slate-300 font-medium">
-                      Full Name <span className="text-red-400">*</span>
-                    </label>
-                    <div className="mt-1 relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                      <Input
-                        type="text"
-                        className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
-                        placeholder="Enter your full name"
-                        value={fullName}
-                        onChange={e => setFullName(e.target.value)}
-                        autoComplete="name"
-                        required
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm text-slate-300 font-medium">
-                      Mobile <span className="text-red-400">*</span>
-                    </label>
-                    <div className="mt-1 relative">
-                      <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                      <Input
-                        type="tel"
-                        className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
-                        placeholder="Enter your 10-digit mobile number"
-                        value={mobile}
-                        onChange={e => setMobile(e.target.value)}
-                        autoComplete="tel"
-                        required
-                        pattern="[6-9]{1}[0-9]{9}"
-                        disabled={loading}
-                        maxLength={10}
-                      />
-                    </div>
-                  </div>
-                </>
+                <SignupExtraFields
+                  fullName={fullName}
+                  setFullName={setFullName}
+                  mobile={mobile}
+                  setMobile={setMobile}
+                  loading={loading}
+                />
               )}
-              <div>
-                <label className="text-sm text-slate-300 font-medium">
-                  Email
-                </label>
-                <div className="mt-1 relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <Input
-                    type="email"
-                    className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    autoComplete="email"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-              {mode !== "forgot" && (
-                <div>
-                  <label className="text-sm text-slate-300 font-medium">
-                    Password
-                  </label>
-                  <div className="mt-1 relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <Input
-                      type="password"
-                      className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      autoComplete={
-                        mode === "login"
-                          ? "current-password"
-                          : "new-password"
-                      }
-                      required
-                      minLength={6}
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-              )}
+              <EmailInput email={email} setEmail={setEmail} loading={loading} />
+              <PasswordInput
+                password={password}
+                setPassword={setPassword}
+                loading={loading}
+                mode={mode}
+              />
               <Button
                 type="submit"
                 className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white text-lg font-semibold shadow-lg border border-slate-600"
@@ -263,53 +197,7 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
                 {errorText}
               </div>
             )}
-            <div className="flex flex-col items-center gap-1">
-              {mode === "login" && (
-                <>
-                  <button
-                    className="text-sm text-blue-400 hover:underline"
-                    type="button"
-                    onClick={() => setMode("forgot")}
-                  >
-                    Forgot password?
-                  </button>
-                  <div className="text-sm text-slate-400 mt-2">
-                    Don't have an account?{" "}
-                    <button
-                      className="text-blue-400 hover:underline"
-                      type="button"
-                      onClick={() => setMode("signup")}
-                    >
-                      Create your account
-                    </button>
-                  </div>
-                </>
-              )}
-              {mode === "signup" && (
-                <div className="text-sm text-slate-400 mt-2">
-                  Already have an account?{" "}
-                  <button
-                    className="text-blue-400 hover:underline"
-                    type="button"
-                    onClick={() => setMode("login")}
-                  >
-                    Log in
-                  </button>
-                </div>
-              )}
-              {mode === "forgot" && (
-                <div className="text-sm text-slate-400 mt-2">
-                  Remembered?{" "}
-                  <button
-                    className="text-blue-400 hover:underline"
-                    type="button"
-                    onClick={() => setMode("login")}
-                  >
-                    Back to login
-                  </button>
-                </div>
-              )}
-            </div>
+            <SwitchAuthModeLinks mode={mode} setMode={setMode} />
           </CardContent>
         </Card>
       </div>
