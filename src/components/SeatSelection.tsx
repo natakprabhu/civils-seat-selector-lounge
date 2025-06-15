@@ -61,6 +61,65 @@ const getLegendGradient = (status: 'vacant' | 'booked' | 'pending' | 'selected')
   }
 };
 
+// Extracted SeatItem for code duplication in seat rendering
+interface SeatItemProps {
+  seat: Seat | undefined;
+  status: 'vacant' | 'selected' | 'pending' | 'booked';
+  seatLabel: string;
+  bookingInProgress: boolean;
+  onSelect: (seatId: string) => void;
+}
+const SeatItem: React.FC<SeatItemProps> = ({
+  seat,
+  status,
+  seatLabel,
+  bookingInProgress,
+  onSelect,
+}) => {
+  if (!seat) {
+    return (
+      <div
+        className="w-10 h-10 m-1 rounded bg-gray-200 opacity-70"
+        key={seatLabel}
+      />
+    );
+  }
+  return (
+    <div className="m-1 flex flex-col items-center" key={seatLabel}>
+      <div style={{
+        background: getLegendGradient(status),
+        borderRadius: "0.75rem",
+        width: "56px",
+        height: "56px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+        boxShadow: "0 2px 8px 0 rgba(30,41,59,0.07)",
+        border: "2px solid #cbd5e1"
+      }}>
+        <SeatIcon
+          seatNumber={seat.seat_number}
+          status={status}
+          onClick={() =>
+            !bookingInProgress &&
+            status === "vacant" &&
+            onSelect(seat.id)
+          }
+          disabled={bookingInProgress || status !== "vacant"}
+        />
+      </div>
+      <span className="text-xs mt-0.5 text-slate-400">
+        {
+          status === 'pending'
+            ? 'On Hold'
+            : status.charAt(0).toUpperCase() + status.slice(1)
+        }
+      </span>
+    </div>
+  );
+};
+
 const SeatSelection: React.FC<SeatSelectionProps> = ({
   seats,
   selectedSeat,
@@ -74,8 +133,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
     return getSeatByNumber(seats);
   }, [seats]);
 
-  // FIXED: Only match bookings that are status 'pending' or 'approved'.
-  /** Returns 'pending' | 'approved' | null for UI logic, ignores 'cancelled'/'expired' */
+  // Only match bookings that are status 'pending' or 'approved'.
   function getBookingStatus(seatId: string): 'pending' | 'approved' | null {
     const found = bookings.find(
       b => b.seat_id === seatId && (b.status === "pending" || b.status === "approved")
@@ -123,49 +181,16 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             <div key={i} className="flex flex-row mb-1">
               {row.map((seatNum) => {
                 const seat = seatsByNumber[seatNum];
-                if (!seat) {
-                  // placeholder for missing seat
-                  return (
-                    <div
-                      key={seatNum}
-                      className="w-10 h-10 m-1 rounded bg-gray-200 opacity-70"
-                    />
-                  );
-                }
-                const status = getSeatStatus(seat);
+                const status = seat ? getSeatStatus(seat) : 'vacant';
                 return (
-                  <div key={seatNum} className="m-1 flex flex-col items-center">
-                    <div style={{
-                        background: getLegendGradient(status),
-                        borderRadius: "0.75rem",
-                        width: "56px",
-                        height: "56px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        position: "relative",
-                        boxShadow: "0 2px 8px 0 rgba(30,41,59,0.07)",
-                        border: "2px solid #cbd5e1"
-                      }}>
-                      <SeatIcon
-                        seatNumber={seat.seat_number}
-                        status={status}
-                        onClick={() =>
-                          !bookingInProgress &&
-                          status === "vacant" &&
-                          onSeatSelect(seat.id)
-                        }
-                        disabled={bookingInProgress || status !== "vacant"}
-                      />
-                    </div>
-                    <span className="text-xs mt-0.5 text-slate-400">
-                      {
-                        status === 'pending'
-                          ? 'On Hold'
-                          : status.charAt(0).toUpperCase() + status.slice(1)
-                      }
-                    </span>
-                  </div>
+                  <SeatItem
+                    key={seatNum}
+                    seat={seat}
+                    status={status}
+                    seatLabel={seatNum}
+                    bookingInProgress={bookingInProgress}
+                    onSelect={onSeatSelect}
+                  />
                 );
               })}
             </div>
@@ -213,48 +238,16 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             <div key={i} className="flex flex-row mb-1">
               {row.map((seatNum) => {
                 const seat = seatsByNumber[seatNum];
-                if (!seat) {
-                  return (
-                    <div
-                      key={seatNum}
-                      className="w-10 h-10 m-1 rounded bg-gray-200 opacity-70"
-                    />
-                  );
-                }
-                const status = getSeatStatus(seat);
+                const status = seat ? getSeatStatus(seat) : 'vacant';
                 return (
-                  <div key={seatNum} className="m-1 flex flex-col items-center">
-                    <div style={{
-                        background: getLegendGradient(status),
-                        borderRadius: "0.75rem",
-                        width: "56px",
-                        height: "56px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        position: "relative",
-                        boxShadow: "0 2px 8px 0 rgba(30,41,59,0.07)",
-                        border: "2px solid #cbd5e1"
-                      }}>
-                      <SeatIcon
-                        seatNumber={seat.seat_number}
-                        status={status}
-                        onClick={() =>
-                          !bookingInProgress &&
-                          status === "vacant" &&
-                          onSeatSelect(seat.id)
-                        }
-                        disabled={bookingInProgress || status !== "vacant"}
-                      />
-                    </div>
-                    <span className="text-xs mt-0.5 text-slate-400">
-                      {
-                        status === 'pending'
-                          ? 'On Hold'
-                          : status.charAt(0).toUpperCase() + status.slice(1)
-                      }
-                    </span>
-                  </div>
+                  <SeatItem
+                    key={seatNum}
+                    seat={seat}
+                    status={status}
+                    seatLabel={seatNum}
+                    bookingInProgress={bookingInProgress}
+                    onSelect={onSeatSelect}
+                  />
                 );
               })}
             </div>
@@ -277,4 +270,4 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
 
 export default SeatSelection;
 
-// NOTE: This file is now very long (over 250 lines)! Consider asking for a refactor into smaller components for maintainability.
+// NOTE: This file is still quite long (over 250 lines)! Ask for a deeper refactor for maintainability.
