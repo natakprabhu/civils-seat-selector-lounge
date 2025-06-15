@@ -1,7 +1,7 @@
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from "@/integrations/supabase/client";
 
-// Minimal Seat type for UI only
 export interface Seat {
   id: string;
   seat_number: string;
@@ -12,22 +12,41 @@ export interface Seat {
 }
 
 export const useSeats = () => {
-  // Dummy hardcoded data for demo/UI usage
-  const [seats] = useState<Seat[]>([
-    { id: '1', seat_number: 'A1', section: 'Main', row_number: '1', status: 'vacant', monthly_rate: 2500 },
-    { id: '2', seat_number: 'A2', section: 'Main', row_number: '1', status: 'booked', monthly_rate: 2500 },
-    { id: '3', seat_number: 'B1', section: 'Main', row_number: '2', status: 'maintenance', monthly_rate: 2500 },
-    { id: '4', seat_number: 'C1', section: 'East', row_number: '3', status: 'on_hold', monthly_rate: 2500 },
-  ]);
-  const loading = false;
+  const [seats, setSeats] = useState<Seat[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // All actions and Supabase logic removed
+  useEffect(() => {
+    const fetchSeats = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("seats")
+        .select("id, seat_number, section, row_number, monthly_rate");
+      setLoading(false);
+      if (data && !error) {
+        // All fetched seats become "vacant" by default
+        // In UI, status will be determined dynamically using existing bookings
+        setSeats(
+          data.map((row: any) => ({
+            id: row.id,
+            seat_number: row.seat_number,
+            section: row.section,
+            row_number: row.row_number,
+            status: 'vacant',
+            monthly_rate: row.monthly_rate
+          }))
+        );
+      } else {
+        setSeats([]);
+      }
+    };
+    fetchSeats();
+  }, []);
+
   return {
     seats,
     loading,
-    // stubs, not used
     lockSeat: async () => ({ error: { message: 'Not implemented' } }),
     releaseSeatLock: async () => ({ error: { message: 'Not implemented' } }),
-    refetch: () => {},
+    refetch: () => {}, // Not needed for now
   };
 };

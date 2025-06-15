@@ -70,6 +70,7 @@ const DUMMY_BOOKING: BookingData = {
 
 import { supabase } from "@/integrations/supabase/client";
 import BookingDialog from './BookingDialog';
+import { toast } from '@/hooks/use-toast';
 
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const { user } = useAuth();
@@ -136,10 +137,15 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
   const handleBookingSubmit = async (details: { name: string; email: string; mobile: string; seatNumber: string; duration: number }) => {
     setFormLoading(true);
-    // Find matching seat row by seat number
+    // Find matching seat row by seat number (now mapped to real UUID)
     const seat = seats.find(s => s.seat_number === details.seatNumber);
     if (!seat || !user) {
       setFormLoading(false);
+      toast({
+        title: 'Error',
+        description: 'Could not find selected seat in system.',
+        variant: 'destructive'
+      });
       return;
     }
     // HACK: Use a hardcoded 'default-show' for show_id, replace as per real logic
@@ -172,8 +178,18 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       }
       setShowDialog(false);
       setSelectedSeat(null);
+      toast({
+        title: 'Booking Requested',
+        description: 'Your booking has been logged and is now pending approval.',
+        variant: 'default'
+      });
+    } else {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to request booking.',
+        variant: 'destructive'
+      });
     }
-    // TODO: Show error notification if booking fails
   };
 
   // Dummy stats calculation
