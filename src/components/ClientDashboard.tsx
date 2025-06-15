@@ -43,7 +43,7 @@ const DUMMY_BOOKING = {
   planDetails: '',
   fromTime: '9:00 AM',
   toTime: '9:00 PM'
-} as const;
+};
 
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const { user } = useAuth();
