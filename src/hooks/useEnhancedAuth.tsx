@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -30,7 +29,7 @@ export function useEnhancedAuth() {
       setUser(session?.user ?? null);
       setLoading(false);
     });
-    return () => subscription?.unsubscribe();
+    return () => subscription.unsubscribe();
   }, [refreshUser]);
 
   // Checks if user's email is confirmed and phone is present/confirmed

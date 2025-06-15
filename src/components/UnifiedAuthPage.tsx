@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,24 +17,6 @@ function isEmail(str: string) {
  */
 function isE164Phone(str: string) {
   return /^\+[1-9]\d{9,14}$/.test(str);
-}
-
-/**
- * Query Supabase for a user by email (returns boolean if exists)
- */
-async function doesEmailExist(email: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("get_user_by_email", { email_to_check: email });
-  // Fallback: If exposed, could also fetch from Auth API via Admin channel (not recommended client-side)
-  if (error || !data) return false;
-  return Boolean(data.exists);
-}
-/**
- * Query Supabase for a user by phone (returns boolean if exists)
- */
-async function doesPhoneExist(phone: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("get_user_by_phone", { phone_to_check: phone });
-  if (error || !data) return false;
-  return Boolean(data.exists);
 }
 
 /**
@@ -59,7 +40,7 @@ const UnifiedAuthPage: React.FC = () => {
   // Helper error storage
   const [formError, setFormError] = useState<string | null>(null);
 
-  // --- Email Flow ---
+  // Remove doesEmailExist/doesPhoneExist; Basic Email Flow:
   const handleContinueWithEmail = async () => {
     setFormError(null);
     if (!isEmail(email)) {
@@ -72,62 +53,67 @@ const UnifiedAuthPage: React.FC = () => {
     }
     setLoading(true);
 
-    // Try to sign in; if account does not exist, register instead
     try {
-      // Try SIGN-IN first
+      // Try login first (signInWithPassword)
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+
       if (signInData.user) {
         toast({ title: "Login successful", description: "Welcome back!" });
         setLoading(false);
         return;
       }
 
-      if (signInError && signInError.message.includes("Invalid login credentials")) {
-        // Registered email but wrong password
-        setFormError("Incorrect email or password.");
+      if (signInError) {
+        // If user not found, fallback to registration
+        if (
+          signInError.message.includes("Invalid login credentials") ||
+          signInError.message.includes("Invalid login")
+        ) {
+          // Try registering this email
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: window.location.origin + "/",
+            },
+          });
+          if (signUpError) {
+            setFormError(signUpError.message);
+            setLoading(false);
+            return;
+          }
+          if (signUpData.user) {
+            toast({
+              title: "Registration successful",
+              description: "Check your email to confirm your account.",
+            });
+            setLoading(false);
+            return;
+          }
+          setFormError("Unexpected error during sign up.");
+          setLoading(false);
+          return;
+        }
+        if (signInError.message.includes("Email not confirmed")) {
+          setFormError("Email not confirmed. Please check your inbox.");
+          setLoading(false);
+          return;
+        }
+        setFormError(signInError.message);
         setLoading(false);
         return;
       }
-      if (signInError && signInError.message.includes("Email not confirmed")) {
-        setFormError("Email not confirmed. Please check your inbox.");
-        setLoading(false);
-        return;
-      }
-
-      // If not registered, sign-up
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin + "/",
-        },
-      });
-      if (signUpError) {
-        setFormError(signUpError.message);
-        setLoading(false);
-        return;
-      }
-      if (signUpData.user) {
-        toast({
-          title: "Registration successful",
-          description: "Check your email to confirm your account.",
-        });
-        setLoading(false);
-        return;
-      }
-      // Fallback error
-      setFormError("Unable to process email registration at this time.");
     } catch (err: any) {
-      setFormError("Unknown error: " + err.message);
+      setFormError("Unknown error: " + (err?.message || err));
     } finally {
       setLoading(false);
     }
   };
 
-  // --- SMS OTP Flow ---
+  // SMS OTP Flow
   const handleContinueWithSms = async () => {
     setFormError(null);
     if (!isE164Phone(phone)) {
@@ -137,44 +123,52 @@ const UnifiedAuthPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Initial OTP: always try signInWithOtp with shouldCreateUser TRUE
-      // If not registered, will register; else logs in. Handle error for duplicate user
-      const { error } = await supabase.auth.signInWithOtp({
+      // First, try as registration
+      const { error: regErr } = await supabase.auth.signInWithOtp({
         phone,
         options: { shouldCreateUser: true },
       });
-      if (error) {
-        // Already registered (code 422): try as login instead
-        if (error.message.includes("already registered") || error.message.includes("User already exists")) {
-          // Try login via OTP
-          const { error: loginOtpError } = await supabase.auth.signInWithOtp({
-            phone,
-            options: { shouldCreateUser: false },
-          });
-          if (loginOtpError) {
-            setFormError(loginOtpError.message);
-            setLoading(false);
-            return;
-          }
-        } else {
-          setFormError(error.message);
-          setLoading(false);
-          return;
-        }
+      if (!regErr) {
+        setOtpStep(true);
+        toast({
+          title: "OTP Sent",
+          description: `An OTP has been sent to ${phone}.`,
+        });
+        setLoading(false); // Allow user to enter OTP immediately
+        return;
       }
-      setOtpStep(true); // Show OTP input
-      toast({
-        title: "OTP Sent",
-        description: `An OTP has been sent to ${phone}.`,
-      });
+      // If already registered (duplicate), now try as login
+      if (
+        regErr.message.toLowerCase().includes("already registered") ||
+        regErr.message.toLowerCase().includes("already exists") ||
+        regErr.message.toLowerCase().includes("user already exists") ||
+        regErr.message.toLowerCase().includes("user already registered")
+      ) {
+        const { error: loginErr } = await supabase.auth.signInWithOtp({
+          phone,
+          options: { shouldCreateUser: false },
+        });
+        if (!loginErr) {
+          setOtpStep(true);
+          toast({
+            title: "OTP Sent",
+            description: `An OTP has been sent to ${phone}.`,
+          });
+        } else {
+          setFormError(loginErr.message);
+        }
+        setLoading(false);
+        return;
+      }
+      // If any other error, show it
+      setFormError(regErr.message);
+      setLoading(false);
     } catch (err: any) {
-      setFormError("Unknown error: " + err.message);
-    } finally {
+      setFormError("Unknown error: " + (err?.message || err));
       setLoading(false);
     }
   };
 
-  // Handles both login/register depending on what was sent above
   const handleVerifyOtp = async () => {
     setFormError(null);
     if (!otp || otp.length < 4) {
@@ -183,7 +177,7 @@ const UnifiedAuthPage: React.FC = () => {
     }
     setLoading(true);
     try {
-      // "type" must be 'sms' for sign in by phone
+      // Always use type: "sms"
       const { data, error } = await supabase.auth.verifyOtp({
         phone,
         token: otp,
@@ -201,13 +195,12 @@ const UnifiedAuthPage: React.FC = () => {
         });
         setOtpStep(false);
         setOtp("");
-        // Optionally, you can auto-refresh session/user state in parent with a callback here
         setLoading(false);
         return;
       }
       setFormError("Unknown error verifying OTP.");
     } catch (err: any) {
-      setFormError("Unknown error: " + err.message);
+      setFormError("Unknown error: " + (err?.message || err));
     } finally {
       setLoading(false);
     }
