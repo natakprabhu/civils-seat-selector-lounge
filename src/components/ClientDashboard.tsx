@@ -96,6 +96,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const userId = user?.id;
   const userEmail = user?.email || userMobile;
 
+  // NEW: Show list and selected show
+  const [shows, setShows] = React.useState<{ id: string, name?: string }[]>([]);
+  const [showsLoading, setShowsLoading] = React.useState(true);
+
   React.useEffect(() => {
     // Fetch user profile from Supabase when the user is present
     const fetchProfile = async () => {
@@ -145,12 +149,28 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       }
     };
     fetchBookings();
+
+    // Fetch available shows
+    const fetchShows = async () => {
+      setShowsLoading(true);
+      const { data, error } = await supabase
+        .from("shows")
+        .select("id, name");
+      setShowsLoading(false);
+      if (data && Array.isArray(data) && data.length > 0) {
+        setShows(data);
+      } else {
+        setShows([]);
+      }
+    };
+    fetchShows();
   }, [user]);
 
-  // Only allow booking if user has no pending/approved booking
+  // Only allow booking if user has no pending/approved booking AND have at least one show
   const userActiveBooking = bookings.some(
     (b) => (b.user_id === userId) && (b.status === "pending" || b.status === "approved")
   );
+  const canBook = shows.length > 0 && !userActiveBooking;
 
   const handleSeatSelect = (seat: string) => {
     setSelectedSeat(seat);
@@ -174,13 +194,25 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       });
       return;
     }
-    // Log user and booking payload for debugging RLS errors
+    // NEW: If no show available, error
+    if (shows.length === 0) {
+      setFormLoading(false);
+      toast({
+        title: 'No Show Found',
+        description: 'Cannot book a seat: No available shows in the system.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    // Use first available show as default
+    const selectedShowId = shows[0].id;
+
     console.log("[Booking Submit] user object:", user);
     console.log("[Booking Submit] user.id:", user.id);
     console.log("[Booking Submit] Booking payload:", {
       user_id: user.id,
       seat_id: seat.id,
-      show_id: TEST_SHOW_UUID,
+      show_id: selectedShowId,
       duration_months: details.duration,
       status: "pending"
     });
@@ -188,7 +220,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     const { error } = await supabase.from("seat_bookings").insert({
       user_id: user.id,
       seat_id: seat.id,
-      show_id: TEST_SHOW_UUID,
+      show_id: selectedShowId,
       duration_months: details.duration,
       status: "pending"
     });
@@ -621,6 +653,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               userActiveBooking={userActiveBooking}
               selectedSeat={selectedSeat}
               onSeatSelect={handleSeatSelect}
+              canBook={canBook}
             />
             {/* Confirm Detail Dialog */}
             <BookingDialog
