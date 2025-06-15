@@ -1,10 +1,10 @@
+
+// Only leaves live seat map, removing all booking actions and bookingInProgress logic.
 import React from 'react';
 import SeatIcon from './SeatIcon';
 import { Seat } from '@/hooks/useSeats';
-import { BookingRequest } from '@/hooks/useBookings';
 import SeatStatusLegend from './SeatStatusLegend';
 
-// Map out the left and right seat arrangement as per HTML
 const LEFT_LAYOUT = [
   ['A1', 'A2'],
   ['B1', 'B2', 'B3', 'B4'],
@@ -13,7 +13,6 @@ const LEFT_LAYOUT = [
   ['E1', 'E2', 'E3', 'E4'],
   ['F1', 'F2', 'F3', 'F4'],
 ];
-
 const RIGHT_LAYOUT = [
   ['A5', 'A6', 'A7'],
   ['B5', 'B6', 'B7'],
@@ -29,12 +28,6 @@ const RIGHT_LAYOUT = [
 
 interface SeatSelectionProps {
   seats: Seat[];
-  selectedSeat: string | null;
-  onSeatSelect: (seatId: string) => void;
-  onConfirmSelection: () => void;
-  bookingInProgress: boolean;
-  bookings: BookingRequest[];
-  userId: string | undefined;
 }
 
 const getSeatByNumber = (seats: Seat[]) => {
@@ -60,20 +53,14 @@ const getLegendGradient = (status: 'vacant' | 'booked' | 'pending' | 'selected')
   }
 };
 
-// Extracted SeatItem for code duplication in seat rendering
-interface SeatItemProps {
+const SeatItem: React.FC<{
   seat: Seat | undefined;
   status: 'vacant' | 'selected' | 'pending' | 'booked';
   seatLabel: string;
-  bookingInProgress: boolean;
-  onSelect: (seatId: string) => void;
-}
-const SeatItem: React.FC<SeatItemProps> = ({
+}> = ({
   seat,
   status,
   seatLabel,
-  bookingInProgress,
-  onSelect,
 }) => {
   if (!seat) {
     return (
@@ -100,12 +87,7 @@ const SeatItem: React.FC<SeatItemProps> = ({
         <SeatIcon
           seatNumber={seat.seat_number}
           status={status}
-          onClick={() =>
-            !bookingInProgress &&
-            status === "vacant" &&
-            onSelect(seat.id)
-          }
-          disabled={bookingInProgress || status !== "vacant"}
+          disabled={true}
         />
       </div>
     </div>
@@ -114,57 +96,28 @@ const SeatItem: React.FC<SeatItemProps> = ({
 
 const SeatSelection: React.FC<SeatSelectionProps> = ({
   seats,
-  selectedSeat,
-  onSeatSelect,
-  onConfirmSelection,
-  bookingInProgress,
-  bookings,
-  userId,
 }) => {
   const seatsByNumber = React.useMemo(() => {
     return getSeatByNumber(seats);
   }, [seats]);
 
-  // Only match bookings that are status 'pending' or 'approved'.
-  function getBookingStatus(seatId: string): 'pending' | 'approved' | null {
-    const found = bookings.find(
-      b => b.seat_id === seatId && (b.status === "pending" || b.status === "approved")
-    );
-    return found ? (found.status as 'pending' | 'approved') : null;
+  // Show status mapped from seat.status (ignore bookings)
+  function getSeatStatus(seat: Seat): 'vacant' | 'booked' | 'pending' | 'selected' {
+    if (seat.status === 'booked') return 'booked';
+    if (seat.status === 'on_hold' || seat.status === 'maintenance') return 'pending';
+    return 'vacant';
   }
 
-  function getSeatStatus(seat: Seat): 'vacant' | 'selected' | 'pending' | 'booked' {
-    if (selectedSeat && seat.id === selectedSeat) {
-      return 'selected';
-    }
-    const bookingStatus = getBookingStatus(seat.id);
-    if (bookingStatus === "pending") {
-      return 'pending';
-    }
-    if (bookingStatus === "approved") {
-      return 'booked';
-    }
-    return "vacant";
-  }
-
-  // Find vacant seat obj for the currently selected seat
-  const selectedVacantSeat =
-    selectedSeat && seats.find(
-      s => s.id === selectedSeat && getSeatStatus(s) === 'selected'
-    );
-
-  // Debug: Log booking + seat computed status mapping
+  // Debug: Print status for verification only
   React.useEffect(() => {
     Object.values(seatsByNumber).forEach(seat => {
       const status = getSeatStatus(seat);
-      const bookingStatus = getBookingStatus(seat.id);
-      console.log('[SeatStatusDebug]', seat.seat_number, 'booking:', bookingStatus, '-> UI computed status:', status);
+      console.log('[SeatStatusDebug]', seat.seat_number, '-> UI status:', status);
     });
-  }, [seats, bookings, selectedSeat]);
+  }, [seats]);
 
   return (
     <div className="w-full flex flex-col items-center">
-      {/* Seat status legend above the seat map */}
       <SeatStatusLegend />
       <div className="flex justify-center items-stretch mt-2 gap-4 flex-wrap w-full">
         {/* Left block */}
@@ -180,22 +133,17 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
                     seat={seat}
                     status={status}
                     seatLabel={seatNum}
-                    bookingInProgress={bookingInProgress}
-                    onSelect={onSeatSelect}
                   />
                 );
               })}
             </div>
           ))}
-          {/* Stairs and Washroom at bottom (below last row "F") */}
           <div className="flex flex-row mt-2 w-full">
-            {/* Stairs */}
             <div className="flex-1 flex items-center justify-center m-1">
               <div className="w-full h-20 bg-gradient-to-t from-slate-400 to-slate-100 border rounded text-sm font-bold flex items-center justify-center shadow box-border text-black">
                 Stairs
               </div>
             </div>
-            {/* Washroom */}
             <div className="flex-1 flex items-center justify-center m-1">
               <div className="w-full h-20 bg-slate-200 border rounded text-sm font-bold flex items-center justify-center shadow box-border text-black">
                 Washroom
@@ -203,10 +151,8 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             </div>
           </div>
         </div>
-        {/* Passage (center) */}
         <div className="relative flex flex-col mx-2">
           <div className="flex-1" />
-          {/* Center one "Passage" label vertically */}
           <div className="w-12 flex flex-col items-center justify-center flex-1" style={{ minHeight: '100%' }}>
             <span
               className="writing-vertical font-bold text-slate-400 text-base"
@@ -224,7 +170,6 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
           <div className="absolute inset-y-0 left-1 w-0.5 bg-gray-300 rounded" />
           <div className="absolute inset-y-0 right-1 w-0.5 bg-gray-300 rounded" />
         </div>
-        {/* Right block */}
         <div className="flex flex-col items-start">
           {RIGHT_LAYOUT.map((row, i) => (
             <div key={i} className="flex flex-row mb-1">
@@ -237,8 +182,6 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
                     seat={seat}
                     status={status}
                     seatLabel={seatNum}
-                    bookingInProgress={bookingInProgress}
-                    onSelect={onSeatSelect}
                   />
                 );
               })}
@@ -246,20 +189,8 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
           ))}
         </div>
       </div>
-
-      {/* Confirm Booking button appears ONLY if vacant seat is selected and user can book */}
-      {!bookingInProgress && selectedVacantSeat && (
-        <button
-          className="mt-6 px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold shadow transition-colors text-base disabled:bg-slate-400 disabled:cursor-not-allowed"
-          onClick={onConfirmSelection}
-        >
-          Confirm Booking
-        </button>
-      )}
     </div>
   );
 };
 
 export default SeatSelection;
-
-// NOTE: This file is still quite long (over 250 lines)! Ask for a deeper refactor for maintainability.
