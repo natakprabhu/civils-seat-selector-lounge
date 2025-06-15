@@ -137,7 +137,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       (b.status === 'pending' || b.status === 'approved')
   );
 
-  // When a seat is selected, show the Confirm button (done in SeatSelection), then open Modal
+  // When a seat is selected, don’t open the modal! Only do so when confirm button is clicked
   const handleSeatSelect = (seatId: string) => {
     setSelectedSeatId(seatId);
   };

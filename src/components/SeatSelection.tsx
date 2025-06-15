@@ -91,6 +91,12 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
     return 'vacant';
   }
 
+  // Find vacant seat obj for the currently selected seat
+  const selectedVacantSeat =
+    selectedSeat && seats.find(
+      s => s.id === selectedSeat && s.status === 'vacant'
+    );
+
   // Debug logs for seat statuses
   React.useEffect(() => {
     Object.values(seatsByNumber).forEach(seat => {
@@ -235,6 +241,16 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Confirm Booking button appears ONLY if vacant seat is selected and user can book */}
+      {!bookingInProgress && selectedVacantSeat && (
+        <button
+          className="mt-6 px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold shadow transition-colors text-base disabled:bg-slate-400 disabled:cursor-not-allowed"
+          onClick={onConfirmSelection}
+        >
+          Confirm Booking
+        </button>
+      )}
     </div>
   );
 };
