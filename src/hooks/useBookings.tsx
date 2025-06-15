@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+// Add optional profile and seat fields
 export interface BookingRequest {
   id: string;
   user_id: string;
@@ -12,6 +14,17 @@ export interface BookingRequest {
   approved_at?: string | null;
   approved_by?: string | null;
   notes?: string | null;
+  profile?: {
+    full_name: string;
+    email: string;
+    mobile: string;
+  };
+  seat?: {
+    id: string;
+    seat_number: string;
+    section: string;
+    row_number: string;
+  };
 }
 
 export const useBookings = () => {
@@ -20,9 +33,14 @@ export const useBookings = () => {
 
   const fetchBookings = async () => {
     try {
+      // Join profiles and seats tables for richer booking info
       const { data, error } = await supabase
         .from('seat_bookings')
-        .select('*')
+        .select(`
+          *,
+          profile:profiles!seat_bookings_user_id_fkey(full_name,email,mobile),
+          seat:seats(id,seat_number,section,row_number)
+        `)
         .order('requested_at', { ascending: false });
 
       if (error) throw error;
@@ -38,6 +56,8 @@ export const useBookings = () => {
         approved_at: booking.approved_at,
         approved_by: booking.approved_by,
         notes: booking.notes,
+        profile: booking.profile || undefined,
+        seat: booking.seat || undefined,
       }));
 
       setBookings(processedBookings);
@@ -64,12 +84,8 @@ export const useBookings = () => {
       if (existingBooking) {
         throw new Error('You already have an active booking request. Please wait for approval or cancel your existing request.');
       }
-      // NOTE: You must provide show_id
-      const { data: shows } = await supabase.from('shows').select('id').limit(1);
-      const show_id = shows && shows[0]?.id;
-      if (!show_id) {
-        throw new Error("Cannot create booking: missing show_id. Please add or define a show.");
-      }
+      // Remove the shows table logic as it's not defined
+      // Insert booking directly
       const { error } = await supabase
         .from('seat_bookings')
         .insert([{
@@ -77,8 +93,7 @@ export const useBookings = () => {
           seat_id: seatId,
           duration_months: durationMonths,
           total_amount: totalAmount,
-          status: 'pending',
-          show_id: show_id
+          status: 'pending'
         }]);
 
       if (error) throw new Error(error.message || "Unknown Supabase insert error");
@@ -188,5 +203,3 @@ export const useBookings = () => {
     refetch: fetchBookings
   };
 };
-
-// NOTE: This file is now over 200 lines. You should consider refactoring it into smaller hooks for clarity and maintainability in future iterations.

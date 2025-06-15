@@ -178,7 +178,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       // Step 2: Create booking
       const seat = seats.find(s => s.id === selectedSeatId);
       if (!seat) throw new Error('Seat not found');
-      const totalAmount = durationMonths * seat.monthly_rate;
+      const totalAmount = durationMonths * (seat.monthly_rate ?? 2500);
 
       const { error: bookingError } = await createBooking(
         selectedSeatId,
@@ -212,7 +212,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         description: "Your seat booking request has been submitted for approval.",
       });
     } catch (error: any) {
-      // Always show error in a human readable way
       const errMsg =
         typeof error === 'string'
           ? error
