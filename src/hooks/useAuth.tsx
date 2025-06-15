@@ -114,8 +114,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line
   }, []);
 
-  // --- Send OTP via Edge Function ---
+  // --- Send OTP via Edge Function or dummy for testing ---
   const sendOtp = async (mobile: string) => {
+    // Dummy test bypass for number 9999999999
+    if (mobile === "9999999999") {
+      return { error: null };
+    }
     setLoading(true);
     try {
       const response = await fetch(
@@ -140,11 +144,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // --- Verify OTP and link to Supabase user system ---
+  // --- Verify OTP and link to Supabase user system or dummy for testing ---
   const verifyOtp = async (mobile: string, otp: string) => {
+    // Dummy test bypass for 9999999999 + 1234 or 123456
+    if (mobile === "9999999999" && (otp === "1234" || otp === "123456")) {
+      setUser({ mobile: "9999999999", role: "admin" });
+      setUserProfile({
+        full_name: "Test Admin",
+        email: "admin@example.com",
+        mobile: "9999999999"
+      });
+      return { error: null };
+    }
     setLoading(true);
     try {
-      // Step 1: Verify with Twilio
+      // Step 1: Verify with Twilio via edge function
       const response = await fetch(
         `${SUPABASE_FUNCTIONS_BASE}/verify-otp`,
         {
@@ -163,10 +177,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Step 2: Ensure Supabase Auth user exists
       const phone = mobile.startsWith('+') ? mobile : `+91${mobile}`;
-      // Try sign-in first
       let getUserRes = await supabase.auth.signInWithOtp({ phone, options: { shouldCreateUser: false } });
 
-      // If not found, register then sign in
       if (getUserRes.error && getUserRes.error.message?.toLowerCase().includes('user not found')) {
         const password = randomPassword();
         await supabase.auth.signUp({ phone, password });
