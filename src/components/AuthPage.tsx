@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -120,6 +119,7 @@ const AuthPage: React.FC = () => {
             )}
             
             <Button
+              type="button"
               onClick={showOtpInput ? handleVerifyOtp : handleSendOtp}
               className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white text-lg font-semibold shadow-lg border border-slate-600"
               disabled={loading || !mobile || !validateMobileNumber(mobile) || (showOtpInput && (otp.length !== 4 && otp.length !== 6))}
