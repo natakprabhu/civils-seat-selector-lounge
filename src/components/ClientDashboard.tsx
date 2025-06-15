@@ -89,8 +89,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   
-  // Use real Supabase data
-  const { seats, loading: seatsLoading, lockSeat, releaseSeatLock, refetch: refetchSeats } = useSeats();
+  // Remove legacy lockSeat, releaseSeatLock. Only useSeats and refetch.
+  const { seats, loading: seatsLoading, refetch: refetchSeats } = useSeats();
   const { bookings, createBooking, refetch: refetchBookings } = useBookings();
   
   const [waitlistPosition] = useState(0);
@@ -125,15 +125,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   // Calculate current booking and seat statistics using real-time database data
   const totalSeats = seats.length;
 
-  // On Hold: booking rows where status is 'pending'
-  const onHoldBookings = bookings.filter(b => b.status === 'pending');
-  const onHold = onHoldBookings.length;
-
-  // Booked: seats that are marked as 'booked' either by seat status or by an approved booking
-  const bookedSeatsSet = new Set(
-    // Seats from main table that have status "booked"
-    seats.filter(s => s.status === 'booked').map(s => s.id)
-  );
+  // Only use booking status to count booked seats (approved bookings)
+  const bookedSeatsSet = new Set<string>();
   bookings.forEach(b => {
     if (b.status === 'approved') {
       bookedSeatsSet.add(b.seat_id);
@@ -141,7 +134,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   });
   const booked = bookedSeatsSet.size;
 
-  // Available: totalSeats - onHold (pending bookings) - booked
+  // Count "on hold" by booking rows where status === 'pending'
+  const onHold = bookings.filter(b => b.status === 'pending').length;
   const availableSeats = totalSeats - onHold - booked;
 
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
@@ -155,10 +149,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       (b.status === 'pending' || b.status === 'approved')
   );
 
-  // When a seat is selected, don’t open the modal! Only do so when confirm button is clicked
+  // Modern seat select handler for SeatSelection 
   const handleSeatSelect = (seatId: string) => {
     setSelectedSeatId(seatId);
   };
+
   const handleConfirmSelection = () => {
     setShowBookingModal(true);
   };
@@ -173,10 +168,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     if (!selectedSeatId || !bookingFormDuration || !user?.id) return;
     setIsBookingSubmitting(true);
     try {
-      // Step 1: Lock the seat (add to seat_locks, status on_hold)
-      const { error: lockError } = await lockSeat(selectedSeatId);
-      if (lockError) throw lockError;
-
       const durationMonths = parseInt(bookingFormDuration);
 
       // Step 2: Create booking (pending, status on_hold)
@@ -242,8 +233,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     );
     if (!myPending) return;
 
-    // Release lock and cancel booking
-    await releaseSeatLock(myPending.seat_id);
     await supabase
       .from('seat_bookings')
       .update({ status: 'cancelled' })
@@ -256,7 +245,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     setBookingFormDuration('');
     toast({
       title: "Booking Request Cancelled",
-      description: "Your booking request and seat lock has been cancelled.",
+      description: "Your booking request has been cancelled.",
     });
   };
 
@@ -264,21 +253,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const showExpiredMsg = bookings.some(
     b => b.user_id === user?.id && b.status === 'cancelled'
   );
-
-  const handleSeatClick = (seatId: string) => {
-    console.log('Seat clicked:', seatId);
-    const seat = seats.find(s => s.id === seatId);
-    if (seat && seat.status === 'vacant') {
-      setSelectedSeat(seat.seat_number);
-      setBookingFormData({
-        ...bookingFormData,
-        seatId: seat.id
-      });
-      setShowBookingModal(true);
-    } else {
-      console.log('Seat not available or not found:', seat);
-    }
-  };
 
   const handleBookingSubmit = async () => {
     try {
@@ -1008,12 +982,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           <CardContent className="p-6">
             <SeatSelection
               seats={seats}
-              selectedSeat={selectedSeatId}
+              seatStatuses={{}} // Pass empty or correct seat status mapping if available; adjust as per your flow
+              selectedSeatId={selectedSeatId}
               onSeatSelect={handleSeatSelect}
-              onConfirmSelection={handleConfirmSelection}
               bookingInProgress={hasActiveBooking}
-              bookings={bookings}
-              userId={user?.id}
+              myUserId={user?.id ?? ""}
             />
             {hasActiveBooking && (
               <p className="mt-4 text-yellow-300 text-sm">
