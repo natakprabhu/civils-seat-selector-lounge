@@ -67,14 +67,14 @@ interface BookingData {
 
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<{ full_name?: string } | null>(null);
+  const [profile, setProfile] = useState<{ full_name?: string; email?: string; mobile?: string } | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
       if (user?.id) {
         const { data } = await supabase
           .from("profiles")
-          .select("full_name")
+          .select("full_name, email, mobile")
           .eq("id", user.id)
           .maybeSingle();
         setProfile(data || null);
@@ -89,8 +89,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   
   // Use real Supabase data
-  const { seats, loading: seatsLoading } = useSeats();
-  const { createBooking } = useBookings();
+  const { seats, loading: seatsLoading, lockSeat, releaseSeatLock, refetch: refetchSeats } = useSeats();
+  const { bookings, createBooking, refetch: refetchBookings } = useBookings();
   
   const [waitlistPosition] = useState(0);
   const [hasPendingSeatChange, setHasPendingSeatChange] = useState(false);
@@ -125,6 +125,104 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const totalSeats = seats.length;
   const availableSeats = seats.filter(s => s.status === 'vacant').length;
   const onHoldSeats = seats.filter(s => s.status === 'on_hold').length;
+
+  const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
+  const [bookingFormDuration, setBookingFormDuration] = useState('');
+  const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
+
+  // Only allow booking if the user has NO pending/approved booking
+  const hasActiveBooking = bookings.some(
+    b =>
+      b.user_id === user?.id &&
+      (b.status === 'pending' || b.status === 'approved')
+  );
+
+  // When a seat is selected, show the Confirm button (done in SeatSelection), then open Modal
+  const handleSeatSelect = (seatId: string) => {
+    setSelectedSeatId(seatId);
+  };
+  const handleConfirmSelection = () => {
+    setShowBookingModal(true);
+  };
+  const handleCloseBookingModal = () => {
+    setShowBookingModal(false);
+    setSelectedSeatId(null);
+    setBookingFormDuration('');
+  };
+
+  // Booking submit
+  const handleBookingFormSubmit = async () => {
+    if (!selectedSeatId || !bookingFormDuration || !user?.id) return;
+    setIsBookingSubmitting(true);
+    try {
+      // Step 1: Lock the seat (add to seat_locks, status on_hold)
+      const { error: lockError } = await lockSeat(selectedSeatId);
+      if (lockError) throw lockError;
+
+      const durationMonths = parseInt(bookingFormDuration);
+
+      // Step 2: Create booking (pending, status on_hold)
+      const seat = seats.find(s => s.id === selectedSeatId);
+      if (!seat) throw new Error('Seat not found');
+      const totalAmount = durationMonths * seat.monthly_rate;
+
+      const { error: bookingError } = await createBooking(
+        selectedSeatId,
+        durationMonths,
+        totalAmount
+      );
+      if (bookingError) throw bookingError;
+
+      setShowBookingModal(false);
+      setSelectedSeatId(null);
+      setBookingFormDuration('');
+      await refetchSeats();
+      await refetchBookings();
+
+      toast({
+        title: "Booking Request Submitted",
+        description: "Your seat has been locked for 1 hour. Request will be cancelled automatically if not approved in time.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to book seat.",
+        variant: "destructive"
+      });
+    }
+    setIsBookingSubmitting(false);
+  };
+
+  // User cancels their pending booking
+  const handleUserCancelBooking = async () => {
+    // Find my pending booking
+    const myPending = bookings.find(
+      b => b.user_id === user?.id && b.status === 'pending'
+    );
+    if (!myPending) return;
+
+    // Release lock and cancel booking
+    await releaseSeatLock(myPending.seat_id);
+    await supabase
+      .from('seat_bookings')
+      .update({ status: 'cancelled' })
+      .eq('id', myPending.id);
+    await refetchSeats();
+    await refetchBookings();
+
+    setShowBookingModal(false);
+    setSelectedSeatId(null);
+    setBookingFormDuration('');
+    toast({
+      title: "Booking Request Cancelled",
+      description: "Your booking request and seat lock has been cancelled.",
+    });
+  };
+
+  // Show in My Booking Details if booking was cancelled due to expiry
+  const showExpiredMsg = bookings.some(
+    b => b.user_id === user?.id && b.status === 'cancelled'
+  );
 
   const handleSeatClick = (seatId: string) => {
     console.log('Seat clicked:', seatId);
@@ -207,7 +305,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     setCurrentView('dashboard');
   };
 
-  // Render different views
   if (currentView === 'seat-change') {
     return (
       <SeatChangeRequest
@@ -572,88 +669,83 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             <CardTitle className="text-xl font-bold text-white">Live Seat Map</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <SeatSelection 
+            <SeatSelection
               seats={seats}
-              selectedSeat={selectedSeat ? seats.find(s => s.seat_number === selectedSeat)?.id || null : null}
-              onSeatSelect={handleSeatClick}
-              onConfirmSelection={() => {}}
+              selectedSeat={selectedSeatId}
+              onSeatSelect={handleSeatSelect}
+              onConfirmSelection={handleConfirmSelection}
+              bookingInProgress={hasActiveBooking}
             />
+            {hasActiveBooking && (
+              <p className="mt-4 text-yellow-300 text-sm">
+                You already have a pending or approved booking. You cannot book another seat until your existing request is processed.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Booking Request Modal with Dark Theme */}
-      <Dialog open={showBookingModal} onOpenChange={setShowBookingModal}>
+      {/* Booking Form Modal */}
+      <Dialog open={showBookingModal} onOpenChange={handleCloseBookingModal}>
         <DialogContent className="max-w-md bg-slate-900 border border-slate-700 text-white">
           <DialogHeader>
             <DialogTitle className="text-slate-300">Booking Request</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="w-full h-32 bg-gradient-to-br from-slate-800 to-slate-700 rounded-lg flex items-center justify-center border border-slate-600">
-              <p className="text-slate-300 font-medium">Seat {selectedSeat} Image</p>
+            {/* Locked for 1hr message */}
+            <div className="w-full h-16 bg-gradient-to-br from-amber-700 to-yellow-800 rounded-lg flex items-center justify-center border border-amber-400 text-yellow-200 shadow">
+              <span>Your selected seat will be locked for 1 hour.</span>
             </div>
-            
+            {/* Profile Details auto-filled */}
             <div>
-              <label className="text-sm font-medium text-slate-300">Name</label>
-              <Input
-                value={bookingFormData.name}
-                onChange={(e) => setBookingFormData({...bookingFormData, name: e.target.value})}
-                placeholder="Enter your full name"
-                className="bg-slate-800 border-slate-600 text-white"
+              <label className="text-sm font-medium text-slate-300">Full Name</label>
+              <input
+                value={profile?.full_name || ''}
+                className="bg-slate-700 border-slate-600 text-white w-full px-3 py-2 rounded"
+                readOnly
               />
             </div>
             <div>
               <label className="text-sm font-medium text-slate-300">Email</label>
-              <Input
-                type="email"
-                value={bookingFormData.email}
-                onChange={(e) => setBookingFormData({...bookingFormData, email: e.target.value})}
-                placeholder="Enter your email"
-                className="bg-slate-800 border-slate-600 text-white"
+              <input
+                value={profile?.email || ''}
+                className="bg-slate-700 border-slate-600 text-white w-full px-3 py-2 rounded"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-300">Mobile</label>
+              <input
+                value={profile?.mobile || ''}
+                className="bg-slate-700 border-slate-600 text-white w-full px-3 py-2 rounded"
+                readOnly
               />
             </div>
             <div>
               <label className="text-sm font-medium text-slate-300">Duration</label>
-              <Select value={bookingFormData.duration} onValueChange={(value) => setBookingFormData({...bookingFormData, duration: value})}>
-                <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
-                  <SelectValue placeholder="Select duration" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-600">
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                    <SelectItem key={month} value={month.toString()} className="text-white hover:bg-slate-700">
-                      {month} Month{month > 1 ? 's' : ''} - ₹{month * 2500}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-300">Selected Seat</label>
-              <Input
-                value={`Seat ${selectedSeat}`}
-                readOnly
-                className="bg-slate-700 border-slate-600 text-white"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-300">Mobile (Locked)</label>
-              <Input
-                value={userMobile}
-                readOnly
-                className="bg-slate-700 border-slate-600 text-white"
-              />
+              <select
+                value={bookingFormDuration}
+                onChange={e => setBookingFormDuration(e.target.value)}
+                className="bg-slate-800 border-slate-600 text-white w-full px-3 py-2 rounded"
+              >
+                <option value="">Select duration</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                  <option key={month} value={month}>{month} Month{month > 1 ? 's' : ''}</option>
+                ))}
+              </select>
             </div>
             <div className="flex gap-2">
-              <Button 
-                onClick={handleBookingSubmit} 
-                className="flex-1 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
+              <Button
+                onClick={handleBookingFormSubmit}
+                className="flex-1 bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white border border-slate-600"
+                disabled={isBookingSubmitting || !bookingFormDuration}
               >
-                Confirm Seat & Submit
+                {isBookingSubmitting ? 'Submitting...' : 'Confirm & Submit'}
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setShowBookingModal(false)} 
-                className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
+              <Button
+                variant="outline"
+                onClick={handleCloseBookingModal}
+                className="bg-gradient-to-b from-slate-700 to-slate-900 text-white border border-slate-600"
               >
                 Cancel
               </Button>
@@ -661,6 +753,12 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </div>
         </DialogContent>
       </Dialog>
+      {/* Show expired/cancelled info in dashboard or modal */}
+      {showExpiredMsg && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-10 z-40 bg-yellow-900 text-yellow-200 px-4 py-3 rounded-lg shadow-lg border border-yellow-500">
+          Your previous booking was automatically cancelled due to timeout or admin rejection.
+        </div>
+      )}
     </div>
   );
 };

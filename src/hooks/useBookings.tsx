@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -79,19 +78,18 @@ export const useBookings = () => {
         throw new Error("User not authenticated. Please log in to book a seat.");
       }
 
-      // Check if user already has an active booking
+      // --- Only allow 1 pending/approved seat booking per user ---
       const { data: existingBooking } = await supabase
         .from('seat_bookings')
         .select('id')
         .eq('user_id', user.id)
         .in('status', ['pending', 'approved'])
-        .single();
-
+        .maybeSingle(); // safe fetch
       if (existingBooking) {
         throw new Error('You already have an active booking request. Please wait for approval or cancel your existing request.');
       }
 
-      // Create new booking
+      // Create new pending booking (seat should already be locked before calling this)
       const { error } = await supabase
         .from('seat_bookings')
         .insert({
@@ -102,18 +100,12 @@ export const useBookings = () => {
           status: 'pending'
         });
 
+      // No need to update seat status again here, handled in seat lock
       if (error) throw error;
-
-      // Update seat status to on_hold
-      await supabase
-        .from('seats')
-        .update({ status: 'on_hold' })
-        .eq('id', seatId);
 
       await fetchBookings();
       return { error: null };
     } catch (error) {
-      console.error('Error creating booking:', error);
       return { error: error instanceof Error ? error : new Error(String(error)) };
     }
   };

@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSeatImages } from '@/hooks/useSeatImages';
@@ -18,13 +17,15 @@ interface SeatSelectionProps {
   selectedSeat: string | null;
   onSeatSelect: (seatId: string) => void;
   onConfirmSelection: () => void;
+  bookingInProgress: boolean;   // NEW: disables selecting if user cannot book
 }
 
 const SeatSelection: React.FC<SeatSelectionProps> = ({
   seats,
   selectedSeat,
   onSeatSelect,
-  onConfirmSelection
+  onConfirmSelection,
+  bookingInProgress
 }) => {
   const { getSeatImage } = useSeatImages();
 
@@ -93,13 +94,10 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   };
 
   const handleSeatClick = (seatNumber: string) => {
+    if (bookingInProgress) return; // prevent selection if booking in progress
     const seatData = getSeatData(seatNumber);
-    console.log('Seat clicked in SeatSelection:', seatNumber, seatData);
     if (seatData && seatData.status === 'vacant') {
-      console.log('Calling onSeatSelect with seat ID:', seatData.id);
       onSeatSelect(seatData.id);
-    } else {
-      console.log('Seat not clickable:', seatData?.status);
     }
   };
 
@@ -201,6 +199,19 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             ))}
           </div>
         </div>
+        {/* Confirm Selection Button */}
+        {selectedSeat && (
+          <div className="flex justify-center mt-8">
+            <Button
+              onClick={onConfirmSelection}
+              className="w-full max-w-xs bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-semibold shadow-lg"
+              disabled={bookingInProgress}
+              data-testid="confirm-selection-button"
+            >
+              Confirm Seat Selection
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
