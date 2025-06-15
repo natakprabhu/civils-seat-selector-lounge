@@ -1,7 +1,15 @@
+// --- Internal Helpers: keep outside component for clarity & testability ---
+function randomPassword(length = 32) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|";
+  let result = '';
+  for (let i = 0; i < length; ++i) result += chars.charAt(Math.floor(Math.random() * chars.length));
+  return result;
+}
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
+// --- Types ---
 interface AuthContextType {
   user: { mobile: string; role?: string } | null;
   loading: boolean;
@@ -15,10 +23,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Supabase Edge Functions base URL
 const SUPABASE_FUNCTIONS_BASE = "https://llvujxdmzuyebkzuutqn.functions.supabase.co";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  // --- State hooks ---
   const [user, setUser] = useState<{ mobile: string; role?: string } | null>(null);
   const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; mobile?: string } | null>({
     full_name: "",
@@ -27,17 +35,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
   const [loading, setLoading] = useState(false);
 
-  // Called to load/update userProfile from supabase
+  // --- Fetch user profile from Supabase users/profiles ---
   const fetchProfile = async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setUserProfile({
-          full_name: "",
-          email: "",
-          mobile: ""
-        });
+        setUserProfile({ full_name: "", email: "", mobile: "" });
         setLoading(false);
         return;
       }
@@ -47,43 +51,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', user.id)
         .maybeSingle();
 
-      if (error || !data) {
-        setUserProfile({
-          full_name: "",
-          email: "",
-          mobile: user.phone || ""
-        });
-        setLoading(false);
-        return;
-      }
-      setUserProfile(data);
-    } catch (error) {
-      setUserProfile({
-        full_name: "",
-        email: "",
-        mobile: ""
-      });
+      setUserProfile(
+        error || !data
+          ? { full_name: "", email: "", mobile: user.phone || "" }
+          : data
+      );
+    } catch {
+      setUserProfile({ full_name: "", email: "", mobile: "" });
     }
     setLoading(false);
   };
 
-  // Handles updating profile data in supabase
+  // --- Save profile info in Supabase profiles table ---
   const completeProfile = async (fullName: string, email: string) => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        setUserProfile({ full_name: "", email: "", mobile: "" });
         setLoading(false);
-        setUserProfile({
-          full_name: "",
-          email: "",
-          mobile: ""
-        });
         return { error: null };
       }
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: fullName, email: email })
+        .update({ full_name: fullName, email })
         .eq('id', user.id);
 
       if (error) {
@@ -93,14 +84,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await fetchProfile();
       setLoading(false);
       return { error: null };
-    } catch (error) {
+    } catch {
       setLoading(false);
       return { error: "Failed to update profile." };
     }
   };
 
-  // Effect: listen for auth state changes and set up user state accordingly
+  // --- Auth State Change effect (sync context with Supabase) ---
   useEffect(() => {
+    // Listener: triggers on login/logout/session changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser({ mobile: session.user.phone || "", role: undefined });
@@ -110,7 +102,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUserProfile(null);
       }
     });
-    // On mount: load current session user/profile
+
+    // Initial load: check if session user/profile exists
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser({ mobile: session.user.phone || "", role: undefined });
@@ -121,7 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line
   }, []);
 
-  // Request to send OTP (handled by edge function)
+  // --- Send OTP via Edge Function ---
   const sendOtp = async (mobile: string) => {
     setLoading(true);
     try {
@@ -147,11 +140,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Verify OTP with Twilio, then guarantee Supabase Auth user exists for DB triggers
+  // --- Verify OTP and link to Supabase user system ---
   const verifyOtp = async (mobile: string, otp: string) => {
     setLoading(true);
     try {
-      // Step 1: Twilio OTP validation via edge function
+      // Step 1: Verify with Twilio
       const response = await fetch(
         `${SUPABASE_FUNCTIONS_BASE}/verify-otp`,
         {
@@ -168,28 +161,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: errMsg };
       }
 
-      // Step 2: Ensure user exists in Supabase Auth (creates user if not found)
+      // Step 2: Ensure Supabase Auth user exists
       const phone = mobile.startsWith('+') ? mobile : `+91${mobile}`;
+      // Try sign-in first
+      let getUserRes = await supabase.auth.signInWithOtp({ phone, options: { shouldCreateUser: false } });
 
-      // Try sign-in first (with shouldCreateUser: false to avoid error flooding)
-      let getUserRes = await supabase.auth.signInWithOtp({
-        phone,
-        options: { shouldCreateUser: false },
-      });
-
-      // If user not found, register then sign in
-      if (getUserRes.error && getUserRes.error.message.toLowerCase().includes('user not found')) {
+      // If not found, register then sign in
+      if (getUserRes.error && getUserRes.error.message?.toLowerCase().includes('user not found')) {
         const password = randomPassword();
-        await supabase.auth.signUp({
-          phone,
-          password,
-        });
-
-        // Once registered, try sign in again
-        getUserRes = await supabase.auth.signInWithOtp({
-          phone,
-          options: { shouldCreateUser: false },
-        });
+        await supabase.auth.signUp({ phone, password });
+        getUserRes = await supabase.auth.signInWithOtp({ phone, options: { shouldCreateUser: false } });
       }
 
       if (getUserRes.error) {
@@ -197,8 +178,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: getUserRes.error.message || "Supabase user creation failed." };
       }
 
-      // Confirmed: user exists and authenticated, triggers run
-      setUser({ mobile: mobile, role: undefined });
+      // Confirmed: user exists & authenticated
+      setUser({ mobile, role: undefined });
       setLoading(false);
       return { error: null };
     } catch (error: any) {
@@ -208,7 +189,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Log out and clear state
+  // --- Logout and cleanup ---
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -231,6 +212,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// --- Hook: for consumer components ---
 export const useAuth = () => {
   const context = useContext(AuthContext) as AuthContextType & {
     userProfile?: { full_name?: string; email?: string; mobile?: string } | null;
@@ -242,12 +224,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-// --- Below: helper for random password ---
-function randomPassword(length = 32) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|";
-  let result = '';
-  for (let i = 0; i < length; ++i) result += chars.charAt(Math.floor(Math.random() * chars.length));
-  return result;
-}
-
