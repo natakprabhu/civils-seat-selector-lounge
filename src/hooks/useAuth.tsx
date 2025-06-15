@@ -1,8 +1,7 @@
-
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 
 interface AuthContextType {
-  user: { mobile: string } | null;
+  user: { mobile: string; role?: string } | null;
   loading: boolean;
   sendOtp: (mobile: string) => Promise<{ error: any }>;
   verifyOtp: (mobile: string, otp: string) => Promise<{ error: any }>;
@@ -15,12 +14,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const SUPABASE_FUNCTIONS_BASE = "https://llvujxdmzuyebkzuutqn.functions.supabase.co";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<{ mobile: string } | null>(null);
+  const [user, setUser] = useState<{ mobile: string; role?: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   // No user session persistence for demo; you could use localStorage if desired
 
   const sendOtp = async (mobile: string) => {
+    // Bypass for admin - don't actually send OTP
+    if (mobile === "9999999999") {
+      setLoading(false);
+      return { error: null };
+    }
+
     setLoading(true);
     try {
       const response = await fetch(`${SUPABASE_FUNCTIONS_BASE}/send-otp`, {
@@ -44,6 +49,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const verifyOtp = async (mobile: string, otp: string) => {
+    // ADMIN BYPASS: allow logging in as admin with code 0000
+    if (mobile === "9999999999" && otp === "0000") {
+      setUser({ mobile, role: "admin" });
+      setLoading(false);
+      return { error: null };
+    }
     setLoading(true);
     try {
       const response = await fetch(`${SUPABASE_FUNCTIONS_BASE}/verify-otp`, {

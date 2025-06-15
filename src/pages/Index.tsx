@@ -1,11 +1,7 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import AuthPage from "@/components/AuthPage";
 import ClientDashboard from "@/components/ClientDashboard";
-
-// Removed AdminDashboard and StaffDashboard for now, as roles aren't provided
-// import AdminDashboard from "@/components/AdminDashboard";
-// import StaffDashboard from "@/components/StaffDashboard";
+import AdminDashboard from "@/components/AdminDashboard";
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -20,11 +16,18 @@ const Index = () => {
     await signOut();
   };
 
-  // Since role info is not set in AuthContext, always render ClientDashboard
+  // Render admin dashboard if user.role === 'admin'
+  if (user.role === "admin") {
+    return (
+      <AdminDashboard onLogout={handleLogout} />
+    );
+  }
+
+  // Default: client dashboard
   return (
-    <ClientDashboard 
-      userMobile={user.mobile || ''} 
-      onLogout={handleLogout} 
+    <ClientDashboard
+      userMobile={user.mobile || ''}
+      onLogout={handleLogout}
     />
   );
 };
