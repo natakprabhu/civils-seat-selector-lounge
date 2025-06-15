@@ -76,6 +76,7 @@ export const useBookings = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        console.error("No supabase user found; authentication/session may not be initialized.");
         throw new Error("User not authenticated. Please log in to book a seat.");
       }
 
