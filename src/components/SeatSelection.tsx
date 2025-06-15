@@ -1,3 +1,4 @@
+
 import React from 'react';
 import SeatIcon from './SeatIcon';
 import { Seat } from '@/hooks/useSeats';
@@ -13,6 +14,22 @@ interface SeatSelectionProps {
   userId: string | undefined;
 }
 
+const getFloorPlanRows = (seats: Seat[]) => {
+  // Group seats by row letter (first char of seat_number)
+  const rowMap: Record<string, Seat[]> = {};
+  seats.forEach(seat => {
+    const row = seat.seat_number.charAt(0);
+    if (!rowMap[row]) rowMap[row] = [];
+    rowMap[row].push(seat);
+  });
+  // Sort rows by row key; within each row, sort by seat_number
+  const sortedRows = Object.entries(rowMap).sort((a, b) => a[0].localeCompare(b[0]));
+  return sortedRows.map(([row, seatsInRow]) => ({
+    row,
+    seats: seatsInRow.sort((a, b) => a.seat_number.localeCompare(b.seat_number))
+  }));
+};
+
 const SeatSelection = ({
   seats,
   selectedSeat,
@@ -21,8 +38,8 @@ const SeatSelection = ({
   bookingInProgress,
   bookings,
   userId,
-}) => {
-  // Determine which seat is pending for the current user
+}: SeatSelectionProps) => {
+  // Find pending seat ID for this user
   let pendingSeatId = null;
   if (bookings && userId) {
     const pendingBooking = bookings.find(
@@ -33,34 +50,44 @@ const SeatSelection = ({
     }
   }
 
+  // Floor plan rows (A, B, C, etc)
+  const seatRows = getFloorPlanRows(seats);
+
   return (
-    <div className="grid grid-cols-8 gap-3">
-      {seats.map((seat) => {
-        // Override status for the current user's pending booking
-        let seatStatus = seat.status;
-        if (pendingSeatId && seat.id === pendingSeatId && seat.status !== "booked") {
-          seatStatus = "on_hold"; // Show "on hold" for this user's pending seat
-        }
-        return (
-          <SeatIcon
-            key={seat.id}
-            seatNumber={seat.seat_number}
-            status={
-              selectedSeat === seat.id
-                ? "selected"
-                : seatStatus === "vacant"
-                ? "vacant"
-                : seatStatus === "on_hold"
-                ? "pending"
-                : seatStatus === "booked"
-                ? "booked"
-                : "vacant"
+    <div className="space-y-4">
+      {seatRows.map(({ row, seats: rowSeats }) => (
+        <div key={row} className="flex flex-row gap-3 justify-center">
+          {rowSeats.map((seat) => {
+            let seatStatus = seat.status;
+            if (
+              pendingSeatId &&
+              seat.id === pendingSeatId &&
+              seat.status !== "booked"
+            ) {
+              seatStatus = "on_hold"; // Show "on_hold" for this user's pending seat
             }
-            onClick={() => onSeatSelect(seat.id)}
-            disabled={bookingInProgress || seatStatus !== "vacant"}
-          />
-        );
-      })}
+            return (
+              <SeatIcon
+                key={seat.id}
+                seatNumber={seat.seat_number}
+                status={
+                  selectedSeat === seat.id
+                    ? "selected"
+                    : seatStatus === "vacant"
+                    ? "vacant"
+                    : seatStatus === "on_hold"
+                    ? "pending"
+                    : seatStatus === "booked"
+                    ? "booked"
+                    : "vacant"
+                }
+                onClick={() => onSeatSelect(seat.id)}
+                disabled={bookingInProgress || seatStatus !== "vacant"}
+              />
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 };
