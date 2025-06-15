@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from "@/hooks/useAuth";
 
 export interface Seat {
   id: string;
@@ -13,6 +14,7 @@ export interface Seat {
 export const useSeats = () => {
   const [seats, setSeats] = useState<Seat[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user, userProfile } = useAuth();
 
   const fetchSeats = async () => {
     try {
@@ -59,12 +61,17 @@ export const useSeats = () => {
 
   // Helper to get current user id and ensure it's defined
   const getUserId = async () => {
+    // Try Supabase session first
     const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) {
+    if (!error && data && data.user && data.user.id) {
+      return data.user.id;
+    }
+    // Fallback: Get from Auth context if available
+    if (user && user.mobile) {
+      // Since we do not have a UUID, return null. Could be patched to use mobile as id in nonsecure flows
       return null;
     }
-    // Allow: Use the 'id' even if profile/table row is missing
-    return data.user.id || null; 
+    return null;
   };
 
   const lockSeat = async (seatId: string) => {
@@ -73,10 +80,10 @@ export const useSeats = () => {
 
     const userId = await getUserId();
     if (!userId) {
-      return { error: { message: "User not authenticated." } };
+      // Try to proceed with basic info in very limited fallback use case
+      return { error: { message: "Still not authenticated with Supabase; please try logging out and back in." } };
     }
 
-    // Try to lock, but fallback if not possible
     const { error } = await supabase
       .from('seat_locks')
       .insert({
@@ -85,14 +92,13 @@ export const useSeats = () => {
         user_id: userId
       });
 
-    // Remove hard check for profile not existing (let booking still go through)
     return { error };
   };
 
   const releaseSeatLock = async (seatId: string) => {
     const userId = await getUserId();
     if (!userId) {
-      return { error: { message: "User not authenticated." } };
+      return { error: { message: "Still not authenticated with Supabase; please try logging out and back in." } };
     }
 
     const { error } = await supabase
