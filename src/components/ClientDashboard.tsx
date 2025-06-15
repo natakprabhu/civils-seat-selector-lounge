@@ -397,18 +397,23 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       const formattedBookings =
         (bookings || []).map(b => {
           // Type guard for SelectQueryError which does NOT have seat_number etc
-          const seat =
-            b.seat &&
+          let seatNumber: string | undefined = undefined;
+          let section: string | undefined = undefined;
+          if (
+            b.seat != null &&
             typeof b.seat === "object" &&
             "seat_number" in b.seat &&
             "section" in b.seat
-              ? (b.seat as { seat_number?: string; section?: string })
-              : {};
+          ) {
+            // b.seat is not null and has these properties
+            seatNumber = (b.seat as { seat_number?: string }).seat_number;
+            section = (b.seat as { section?: string }).section;
+          }
           return {
             id: b.id,
             type: 'New Booking' as const,
-            seatNumber: seat.seat_number,
-            section: seat.section,
+            seatNumber,
+            section,
             duration: b.duration_months,
             totalAmount: b.total_amount,
             status: b.status,
