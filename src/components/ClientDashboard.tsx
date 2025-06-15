@@ -72,7 +72,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   
   // Use real Supabase data
   const { seats, loading: seatsLoading, lockSeat } = useSeats();
-  const { createBooking, bookings } = useBookings();
+  const { createBooking, bookings, rejectBooking, refetch: refetchBookings } = useBookings(); // get rejectBooking
   
   const [waitlistPosition] = useState(0);
   const [hasPendingSeatChange, setHasPendingSeatChange] = useState(false);
@@ -232,6 +232,69 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     setCurrentView('dashboard');
   };
 
+  // Helper to sync userBooking with current Supabase bookings (simplified: reset status if not found)
+  const reloadBookingStatus = async () => {
+    await refetchBookings();
+    // Find the user's latest booking (pending or approved)
+    const myBooking = bookings.find(
+      (b) => ['pending', 'approved'].includes(b.status)
+    );
+    if (!myBooking) {
+      // No active booking: reset UI
+      setUserBooking((prev) => ({
+        ...prev,
+        status: 'not_applied',
+        seatNumber: '',
+        planDetails: '',
+        // ... default values for other fields
+      }));
+    } else {
+      // Map booking data to our state model
+      setUserBooking((prev) => ({
+        ...prev,
+        seatNumber: myBooking.seat?.seat_number || '',
+        name: myBooking.profile?.full_name || prev.name,
+        email: myBooking.profile?.email || prev.email,
+        mobile: myBooking.profile?.mobile || prev.mobile,
+        duration: myBooking.duration_months ? `${myBooking.duration_months}` : '',
+        status: myBooking.status,
+        submittedAt: myBooking.requested_at,
+        paymentStatus: 'pending', // Not tracked here
+        paidAmount: undefined,
+        paidOn: undefined,
+        paymentMethod: undefined,
+        validTill: myBooking.end_date || '',
+        remainingDays: undefined,
+        startDate: myBooking.start_date || '',
+        planDetails: `${myBooking.duration_months} Month${myBooking.duration_months > 1 ? 's' : ''}`,
+      }));
+    }
+  };
+
+  // Cancel active/pending request handler
+  const handleCancelRequest = async () => {
+    try {
+      // Find the active/pending booking
+      const myBooking = bookings.find(
+        (b) => ['pending', 'approved'].includes(b.status)
+      );
+      if (!myBooking) return;
+      const { error } = await rejectBooking(myBooking.id);
+      if (error) throw error;
+      toast({
+        title: "Booking Cancelled",
+        description: "Your seat booking request has been cancelled.",
+      });
+      await reloadBookingStatus();
+    } catch (error: any) {
+      toast({
+        title: "Error Cancelling Request",
+        description: error.message || "Could not cancel request. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Render different views
   if (currentView === 'seat-change') {
     return (
@@ -288,6 +351,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         userBooking={userBooking}
         onBack={() => setCurrentView('dashboard')}
         onViewTransactions={() => setCurrentView('all-transactions')}
+        onCancelRequest={handleCancelRequest}
       />
     );
   }
