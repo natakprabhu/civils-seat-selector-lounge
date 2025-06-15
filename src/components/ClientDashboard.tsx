@@ -39,6 +39,7 @@ import {
   ArrowRight,
   Bell
 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface ClientDashboardProps {
   userMobile: string;
@@ -448,6 +449,60 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     setCurrentView('dashboard');
   };
 
+  // State for confirmation dialog
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [transactionToCancel, setTransactionToCancel] = useState<string | null>(null);
+
+  // Delete transaction logic
+  const handleConfirmCancelBooking = async () => {
+    if (!transactionToCancel) return;
+    try {
+      // Delete booking by id from the seat_bookings table
+      const { error } = await supabase
+        .from('seat_bookings')
+        .delete()
+        .eq('id', transactionToCancel);
+
+      if (error) throw error;
+      // Optionally: remove from UI state immediately
+      setUserTransactions(prev => prev.filter(txn => txn.id !== transactionToCancel));
+      toast({
+        title: "Booking Cancelled",
+        description: "Your booking request has been cancelled.",
+        variant: "default"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel booking.",
+        variant: "destructive"
+      });
+    } finally {
+      setShowCancelDialog(false);
+      setTransactionToCancel(null);
+      // Optionally: refetchBookings();
+    }
+  };
+
+  // Countdown timer hook per booking/request
+  const useBookingTimer = (requestedAt: string) => {
+    const [timeLeft, setTimeLeft] = useState<number>(0);
+
+    useEffect(() => {
+      if (!requestedAt) return;
+      const requested = new Date(requestedAt).getTime();
+      const expiresAt = requested + 60 * 60 * 1000; // 1 hour after requested
+      const tick = () => {
+        const now = Date.now();
+        setTimeLeft(Math.max(0, Math.floor((expiresAt - now) / 1000)));
+      };
+      tick();
+      const interval = setInterval(tick, 1000);
+      return () => clearInterval(interval);
+    }, [requestedAt]);
+    return timeLeft;
+  };
+
   if (currentView === 'seat-change') {
     return (
       <SeatChangeRequest
@@ -614,7 +669,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                       </Button>
                       <Button 
                         variant="ghost" 
-                        className="w-full justify-start text-white hover:bg-slate-800/50"
+                        className="w-full justify-start text-white hover:bg-slate-800/50" 
                         onClick={() => {
                           setCurrentView('my-booking');
                           setShowUserDropdown(false);
@@ -806,48 +861,103 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               </div>
             ) : (
               <div className="divide-y divide-slate-800">
-                {userTransactions.map(txn => (
-                  <div key={txn.id} className="py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <div>
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mr-2
-                        ${txn.type === 'New Booking' ? 'bg-blue-800 text-blue-200' : 'bg-violet-800 text-violet-200'}
-                      `}>
-                        {txn.type}
-                      </span>
-                      <span className="text-sm text-white font-medium">
-                        {txn.type === "New Booking" ? (
-                          <>
-                            {txn.seatNumber ? `Seat ${txn.seatNumber}` : 'No seat'}{txn.section ? ` (${txn.section})` : ''} •{" "}
-                            {txn.duration ? `${txn.duration} month${txn.duration > 1 ? 's' : ''}` : ''}
-                          </>
-                        ) : (
-                          <>
-                            Change to {txn.seatNumber ? `Seat ${txn.seatNumber}` : 'new seat'}{txn.section ? ` (${txn.section})` : ''} 
-                            {txn.description ? <> • <span className="italic">{txn.description}</span></> : null}
-                          </>
+                {userTransactions.map(txn => {
+                  // Show timer only for pending bookings and pending seat change requests
+                  let showTimer = txn.status === "pending" && txn.requestedAt;
+                  let timeLeft = 0, mins = 0, secs = 0;
+                  if (showTimer) {
+                    timeLeft = useBookingTimer(txn.requestedAt);
+                    mins = Math.floor(timeLeft / 60);
+                    secs = timeLeft % 60;
+                  }
+
+                  return (
+                    <div key={txn.id} className="py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                      <div>
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mr-2
+                          ${txn.type === 'New Booking' ? 'bg-blue-800 text-blue-200' : 'bg-violet-800 text-violet-200'}
+                        `}>
+                          {txn.type}
+                        </span>
+                        <span className="text-sm text-white font-medium">
+                          {txn.type === "New Booking" ? (
+                            <>
+                              {txn.seatNumber ? `Seat ${txn.seatNumber}` : 'No seat'}{txn.section ? ` (${txn.section})` : ''} •{" "}
+                              {txn.duration ? `${txn.duration} month${txn.duration > 1 ? 's' : ''}` : ''}
+                            </>
+                          ) : (
+                            <>
+                              Change to {txn.seatNumber ? `Seat ${txn.seatNumber}` : 'new seat'}{txn.section ? ` (${txn.section})` : ''} 
+                              {txn.description ? <> • <span className="italic">{txn.description}</span></> : null}
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex flex-col md:flex-row md:items-center gap-2 text-sm">
+                        <span className="text-slate-400">
+                          {txn.requestedAt ? new Date(txn.requestedAt).toLocaleString() : ""}
+                        </span>
+                        <Badge
+                          variant={
+                            txn.status === 'approved' ? 'default'
+                            : txn.status === 'pending' ? 'secondary'
+                            : 'destructive'
+                          }
+                        >
+                          {txn.status.charAt(0).toUpperCase() + txn.status.slice(1)}
+                        </Badge>
+                        <span className="flex items-center gap-1">
+                          <IndianRupee className="w-4 h-4 text-green-400" />
+                          {txn.totalAmount ? txn.totalAmount : 0}
+                        </span>
+                        {/* Countdown Timer for pending bookings */}
+                        {showTimer && timeLeft > 0 && (
+                          <span className="px-3 py-1 bg-yellow-700 text-yellow-100 font-mono text-xs rounded">
+                            {mins}:{secs.toString().padStart(2, '0')} min left before fresh booking
+                          </span>
                         )}
-                      </span>
+                        {/* Cancel Booking Button for pending bookings in time */}
+                        {txn.type === "New Booking" && txn.status === "pending" && timeLeft > 0 && (
+                          <AlertDialog open={showCancelDialog && transactionToCancel === txn.id} onOpenChange={(open) => {
+                            setShowCancelDialog(open);
+                            if (!open) setTransactionToCancel(null);
+                          }}>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="ml-2"
+                                onClick={() => {
+                                  setTransactionToCancel(txn.id);
+                                  setShowCancelDialog(true);
+                                }}
+                              >
+                                Cancel Booking
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. Do you want to cancel this booking?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Close</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  className="bg-red-600 hover:bg-red-700 text-white"
+                                  onClick={handleConfirmCancelBooking}
+                                >
+                                  Yes, Cancel
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-col md:flex-row md:items-center gap-2 text-sm">
-                      <span className="text-slate-400">
-                        {txn.requestedAt ? new Date(txn.requestedAt).toLocaleString() : ""}
-                      </span>
-                      <Badge
-                        variant={
-                          txn.status === 'approved' ? 'default'
-                          : txn.status === 'pending' ? 'secondary'
-                          : 'destructive'
-                        }
-                      >
-                        {txn.status.charAt(0).toUpperCase() + txn.status.slice(1)}
-                      </Badge>
-                      <span className="flex items-center gap-1">
-                        <IndianRupee className="w-4 h-4 text-green-400" />
-                        {txn.totalAmount ? txn.totalAmount : 0}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
