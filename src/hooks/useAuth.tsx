@@ -141,26 +141,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const verifyOtp = async (mobile: string, otp: string) => {
     setLoading(true);
     try {
-      // Verify OTP and log in to Supabase
-      const { data, error } = await supabase.auth.verifyOtp({
+      // Verify OTP using Twilio-powered Supabase Edge Function
+      const response = await fetch(
+        `${SUPABASE_FUNCTIONS_BASE}/verify-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ mobile, otp })
+        }
+      );
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setLoading(false);
+        const errMsg = data?.error || "Verification failed. Please check your details and try again.";
+        console.error("Twilio OTP verification failed", errMsg);
+        return { error: errMsg };
+      }
+
+      // Now, sign in (or sign up if user does not exist) via Supabase using signInWithOtp (but skip its OTP, because it's verified via Twilio)
+      // We'll use signInWithOtp with "options: { shouldCreateUser: true }" (Supabase will just set the session w/o sending OTP again)
+      const { data: result, error } = await supabase.auth.signInWithOtp({
         phone: mobile.startsWith('+') ? mobile : `+91${mobile}`,
         token: otp,
-        type: 'sms'
+        type: 'sms',
+        options: {
+          shouldCreateUser: true
+        }
       });
+
       setLoading(false);
 
       if (error) {
-        // Log actual error; return generic message to user
-        console.error("OTP verification error:", error.message);
-        return { error: "Verification failed. Please check your details and try again." };
-      } else if (data?.user) {
-        setUser({ mobile: data.user.phone || "" });
+        console.error("Supabase session creation error:", error.message);
+        return { error: "Login failed after OTP verification. Please try again." };
+      } else if (result?.user) {
+        setUser({ mobile: result.user.phone || "", role: undefined });
         return { error: null };
       }
-      return { error: "Verification failed. Please check your details and try again." };
-    } catch (error) {
+      return { error: "Login failed after OTP verification." };
+    } catch (error: any) {
       setLoading(false);
-      console.error("OTP verification error:", error);
+      console.error("verifyOtp error:", error);
       return { error: "Verification failed. Please check your details and try again." };
     }
   };
