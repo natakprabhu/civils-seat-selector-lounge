@@ -396,7 +396,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       // Map to transaction format
       const formattedBookings =
         (bookings || []).map(b => {
-          // Type guard for SelectQueryError which does NOT have seat_number etc
           let seatNumber: string | undefined = undefined;
           let section: string | undefined = undefined;
           if (
@@ -406,8 +405,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             "section" in b.seat
           ) {
             // b.seat is not null and has these properties
-            seatNumber = (b.seat as { seat_number?: string }).seat_number;
-            section = (b.seat as { section?: string }).section;
+            seatNumber = b.seat && (b.seat as { seat_number?: string }).seat_number;
+            section = b.seat && (b.seat as { section?: string }).section;
           }
           return {
             id: b.id,
