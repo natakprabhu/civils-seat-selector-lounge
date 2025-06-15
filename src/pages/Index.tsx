@@ -8,6 +8,9 @@ import StaffDashboard from "@/components/StaffDashboard";
 const Index = () => {
   const { user, userRole, loading, signOut } = useAuth();
 
+  // Debugging logs
+  console.log("Index.tsx render", { user, userRole, loading });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -28,11 +31,15 @@ const Index = () => {
   // Route based on user role
   switch (userRole) {
     case 'admin':
+      console.log("Rendering AdminDashboard");
       return <AdminDashboard onLogout={handleLogout} />;
     case 'staff':
+      console.log("Rendering StaffDashboard");
       return <StaffDashboard onLogout={handleLogout} />;
     case 'client':
     default:
+      // Log full user object for debug
+      console.log("Rendering ClientDashboard with user", user);
       return (
         <ClientDashboard 
           userMobile={user.email || user.user_metadata?.email || ''} 
