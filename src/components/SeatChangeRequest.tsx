@@ -22,6 +22,10 @@ const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
   const [reason, setReason] = useState('');
 
+  // dummy values for bookings etc so SeatSelection renders with correct props
+  const bookings = [];
+  const userActiveBooking = false;
+
   useEffect(() => {
     if (!loading && seats.length > 0) {
       // Initialize selected seat if currentSeat is valid
@@ -32,8 +36,8 @@ const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
     }
   }, [currentSeat, loading, seats]);
 
-  const handleSeatSelect = (seatId: string) => {
-    setSelectedSeat(seatId);
+  const handleSeatSelect = (seatNumber: string) => {
+    setSelectedSeat(seatNumber);
   };
 
   const handleSubmit = () => {
@@ -68,7 +72,6 @@ const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
     return seat ? seat.seat_number : 'N/A';
   };
 
-  // Replace broken usage with just seats prop
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
       <div className="max-w-4xl mx-auto px-6 py-8">
@@ -101,7 +104,13 @@ const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
 
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-300 mb-2">Select New Seat</label>
-              <SeatSelection seats={seats} />
+              <SeatSelection
+                seats={seats}
+                bookings={bookings}
+                userActiveBooking={userActiveBooking}
+                onSeatSelect={handleSeatSelect}
+                selectedSeat={selectedSeat}
+              />
             </div>
 
             <Button

@@ -101,8 +101,20 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         .select("seat_id, status, user_id")
         .in("status", ["pending", "approved"]);
       setBookingsLoading(false);
-      if (data) setBookings(data);
-      else setBookings([]);
+      if (data) {
+        // Cast and filter so status is strictly "pending" | "approved"
+        const filtered = data.filter(
+          (b: any) => b.status === "pending" || b.status === "approved"
+        ).map(
+          (b: any) => ({
+            ...b,
+            status: b.status as "pending" | "approved"
+          })
+        );
+        setBookings(filtered);
+      } else {
+        setBookings([]);
+      }
     };
     fetchBookings();
   }, []);
@@ -130,10 +142,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       setFormLoading(false);
       return;
     }
-    // Insert seat_booking with status 'pending'
+    // HACK: Use a hardcoded 'default-show' for show_id, replace as per real logic
     const { error } = await supabase.from("seat_bookings").insert({
       user_id: user.id,
       seat_id: seat.id,
+      show_id: 'default-show', // <-- replace with a real UUID if available
       duration_months: details.duration,
       status: "pending"
     });
@@ -144,7 +157,19 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         .from("seat_bookings")
         .select("seat_id, status, user_id")
         .in("status", ["pending", "approved"]);
-      if (newBookings) setBookings(newBookings);
+
+      if (newBookings) {
+        // again, filter and cast status as needed
+        const filtered = newBookings.filter(
+          (b: any) => b.status === "pending" || b.status === "approved"
+        ).map(
+          (b: any) => ({
+            ...b,
+            status: b.status as "pending" | "approved"
+          })
+        );
+        setBookings(filtered);
+      }
       setShowDialog(false);
       setSelectedSeat(null);
     }
