@@ -78,7 +78,7 @@ const TEST_SHOW_UUID = '00000000-0000-0000-0000-000000000000'; // <-- Replace th
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const { user } = useAuth();
   const { seats, loading: seatsLoading } = useSeats();
-  const [profile] = useState<{ full_name?: string; email?: string; mobile?: string } | null>({ full_name: 'User Name', email: 'user@email.com', mobile: '9876543210' });
+  const [profile, setProfile] = useState<{ full_name?: string; email?: string; mobile?: string } | null>(null);
   const [currentView, setCurrentView] = useState<'dashboard' | 'seat-change' | 'transactions' | 'edit-profile' | 'my-booking' | 'extend-booking' | 'all-transactions' | 'notice-board'>('dashboard');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [userBooking, setUserBooking] = useState<BookingData>(DUMMY_BOOKING);
@@ -97,6 +97,21 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const userEmail = user?.email || userMobile;
 
   React.useEffect(() => {
+    // Fetch user profile from Supabase when the user is present
+    const fetchProfile = async () => {
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('full_name, email, mobile')
+          .eq('id', user.id)
+          .single();
+        if (data) {
+          setProfile(data);
+        }
+      }
+    };
+    fetchProfile();
+
     // Fetch all seat bookings for status pending/approved
     const fetchBookings = async () => {
       setBookingsLoading(true);
@@ -121,7 +136,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       }
     };
     fetchBookings();
-  }, []);
+  }, [user]);
 
   // Only allow booking if user has no pending/approved booking
   const userActiveBooking = bookings.some(
@@ -150,7 +165,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       });
       return;
     }
-    // ⬇️ Insert using a real/test show UUID
+    // Insert using the authenticated user's id to comply with RLS policy
     const { error } = await supabase.from("seat_bookings").insert({
       user_id: user.id,
       seat_id: seat.id,
@@ -593,6 +608,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               onSubmit={handleBookingSubmit}
               seatNumber={selectedSeat || ""}
               loading={formLoading}
+              // Pass profile details as new props
+              name={profile?.full_name || ""}
+              email={profile?.email || ""}
+              mobile={profile?.mobile || ""}
             />
           </CardContent>
         </Card>
