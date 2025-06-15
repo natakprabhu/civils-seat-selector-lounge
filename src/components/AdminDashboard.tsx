@@ -263,19 +263,20 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                       </div>
                       <div>
                         <p className="text-sm text-slate-400">Actions</p>
-                      {request.status !== 'pending' && (
-                        <p className="text-sm text-slate-500">
-                          {request.status === 'approved' ? 'Approved' : 'Rejected'}
-                        </p>
-                      )}
+                        {request.status !== 'pending' && (
+                          <p className="text-sm text-slate-500">
+                            {request.status === 'approved' ? 'Approved' : 'Rejected'}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
