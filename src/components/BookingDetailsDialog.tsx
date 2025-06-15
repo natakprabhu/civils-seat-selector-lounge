@@ -7,14 +7,23 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+// You may want a prop for showId. Here we use a placeholder UUID for demo.
+const DEMO_SHOW_ID = "61559e4a-63b6-49ae-bdb4-17b046d3534f";
+
 interface BookingDetailsDialogProps {
   seatId: string;
   onClose: () => void;
   myUserId: string;
+  showId?: string;
 }
 
-const BookingDetailsDialog: React.FC<BookingDetailsDialogProps> = ({ seatId, onClose, myUserId }) => {
-  const [profile, setProfile] = useState<{ full_name: string, email: string, mobile: string } | null>(null);
+const BookingDetailsDialog: React.FC<BookingDetailsDialogProps> = ({
+  seatId,
+  onClose,
+  myUserId,
+  showId // optional, fallback to DEMO_SHOW_ID if not provided
+}) => {
+  const [profile, setProfile] = useState<{ full_name: string; email: string; mobile: string } | null>(null);
   const [form, setForm] = useState({ name: '', email: '', phone: '', duration: '' });
   const [submitting, setSubmitting] = useState(false);
 
@@ -50,16 +59,41 @@ const BookingDetailsDialog: React.FC<BookingDetailsDialogProps> = ({ seatId, onC
       return;
     }
     setSubmitting(true);
-    // Here you can call a booking API, mutate bookings etc.
-    // Show success notification and close
-    setTimeout(() => {
+
+    // Insert booking into Supabase DB
+    try {
+      // Use the provided or fallback showId
+      const finalShowId = showId || DEMO_SHOW_ID;
+
+      const { error } = await supabase
+        .from("seat_bookings")
+        .insert({
+          seat_id: seatId,
+          show_id: finalShowId,
+          user_id: myUserId,
+          payment_reference: null,
+        });
+
+      if (error) {
+        toast({ title: "Booking failed", description: error.message || "Could not submit booking", variant: "destructive" });
+        setSubmitting(false);
+        return;
+      }
+
       toast({
         title: "Booking request submitted!",
         description: `Seat ${seatId} booking requested. You will be notified once approved.`
       });
       setSubmitting(false);
       onClose();
-    }, 1200);
+    } catch (err: any) {
+      toast({
+        title: "Unexpected error",
+        description: err?.message || "Could not complete booking.",
+        variant: "destructive"
+      });
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -75,7 +109,7 @@ const BookingDetailsDialog: React.FC<BookingDetailsDialogProps> = ({ seatId, onC
           </div>
           <div>
             <label className="block text-sm font-medium mb-1" htmlFor="email">Email</label>
-            <Input id="email" name="email" value={form.email} onChange={handleChange} required type="email" disabled />
+            <Input id="email" name="email" value={form.email} required type="email" disabled />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1" htmlFor="phone">Phone</label>
