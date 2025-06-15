@@ -668,17 +668,17 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                   seats={seats}
                   selectedSeat={selectedSeatId}
                   onSeatSelect={handleSeatClick}
-                  showConfirmButton
+                  showConfirmButton={false}  // Do not show the button inside SeatSelection
                   onConfirmSelection={handleConfirmSeat}
                   locking={locking}
                 />
-              </div>
-              {/* Confirm Seat column (shows only if seat selected) */}
-              <div className="w-full md:w-1/3 mt-4 md:mt-0 flex flex-col items-center">
+                {/* Confirm Seat button always appears just below the seat layout */}
                 {selectedSeatId && (
-                  <div className="rounded-xl bg-slate-800/80 p-6 border border-slate-700/60 shadow-2xl flex flex-col items-center">
+                  <div className="rounded-xl bg-slate-800/80 p-6 border border-slate-700/60 shadow-2xl flex flex-col items-center mt-6 w-full max-w-lg mx-auto">
                     <h3 className="text-lg font-bold text-white mb-2">Confirm Your Seat</h3>
-                    <div className="text-slate-300 mb-4">You have selected <span className="font-semibold text-cyan-300">Seat {seats.find(s => s.id === selectedSeatId)?.seat_number}</span>.</div>
+                    <div className="text-slate-300 mb-4">
+                      You have selected <span className="font-semibold text-cyan-300">Seat {seats.find(s => s.id === selectedSeatId)?.seat_number}</span>.
+                    </div>
                     <Button 
                       className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold"
                       onClick={handleConfirmSeat}
@@ -689,6 +689,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                   </div>
                 )}
               </div>
+              {/* Remove the confirm seat sidebar/column for desktop */}
+              {/* <div className="w-full md:w-1/3 mt-4 md:mt-0 flex flex-col items-center">
+                ...
+              </div> */}
             </div>
           </CardContent>
         </Card>
