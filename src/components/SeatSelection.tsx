@@ -127,23 +127,20 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
       {/* Aisle */}
       <div className="relative flex flex-col mx-2">
         <div className="flex-1" />
-        <div className="w-12 flex flex-col items-center justify-center gap-2 py-6">
-          {/* Display multiple "Aisle" labels down the passage */}
-          {Array.from({ length: 6 }).map((_, idx) => (
-            <span
-              key={idx}
-              className="writing-vertical font-bold text-slate-400 text-base"
-              style={{
-                writingMode: "vertical-rl",
-                transform: "rotate(180deg)",
-                letterSpacing: 2,
-                margin: 0,
-                lineHeight: 1.2,
-              }}
-            >
-              Aisle
-            </span>
-          ))}
+        {/* Center one "Passage" label vertically */}
+        <div className="w-12 flex flex-col items-center justify-center flex-1" style={{ minHeight: '100%' }}>
+          <span
+            className="writing-vertical font-bold text-slate-400 text-base"
+            style={{
+              writingMode: "vertical-rl",
+              transform: "rotate(180deg)",
+              letterSpacing: 2,
+              margin: 0,
+              lineHeight: 1.2,
+            }}
+          >
+            Passage
+          </span>
         </div>
         <div className="absolute inset-y-0 left-1 w-0.5 bg-gray-300 rounded" />
         <div className="absolute inset-y-0 right-1 w-0.5 bg-gray-300 rounded" />
