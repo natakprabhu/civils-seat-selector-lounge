@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,6 +18,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Helper to get Edge Function URL
 const SUPABASE_FUNCTIONS_BASE = "https://llvujxdmzuyebkzuutqn.functions.supabase.co";
 
+// Helper: generate a random string for a 'dummy' password (never used, but required for signUp)
+function randomPassword(length = 32) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|";
+  let result = '';
+  for (let i = 0; i < length; ++i) result += chars.charAt(Math.floor(Math.random() * chars.length));
+  return result;
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<{ mobile: string; role?: string } | null>(null);
   const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; mobile?: string } | null>({
@@ -31,8 +40,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser({ mobile: session.user.phone || "", role: undefined });
-
-        // fetch user profile non-blocking
         setTimeout(() => {
           fetchProfile();
         }, 0);
@@ -161,7 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const verifyOtp = async (mobile: string, otp: string) => {
     setLoading(true);
     try {
-      // Verify OTP using Twilio-powered Supabase Edge Function
+      // 1. Verify OTP using Twilio-powered Supabase Edge Function
       const response = await fetch(
         `${SUPABASE_FUNCTIONS_BASE}/verify-otp`,
         {
@@ -179,7 +186,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("Twilio OTP verification failed", errMsg);
         return { error: errMsg };
       }
-      // If Twilio verifies OTP, consider user authenticated at app level
+
+      // 2. After Twilio verification, check if user exists in Supabase Auth.
+      // We always store with "+91" prefix for Indian numbers as Supabase expects.
+      const phone = mobile.startsWith('+') ? mobile : `+91${mobile}`;
+
+      // Check if a Supabase Auth user exists for this phone
+      let getUserRes = await supabase.auth.signInWithOtp({
+        phone,
+        options: { shouldCreateUser: false },
+      });
+
+      // If user doesn't exist yet, register/signup to Supabase Auth (which fires DB trigger)
+      if (getUserRes.error && getUserRes.error.message.toLowerCase().includes('user not found')) {
+        // Use random password, it's never used, phone login does not require password
+        const password = randomPassword();
+        await supabase.auth.signUp({
+          phone,
+          password,
+        });
+
+        // Now, try signInWithOtp again to get session
+        getUserRes = await supabase.auth.signInWithOtp({
+          phone,
+          options: { shouldCreateUser: false },
+        });
+      }
+
+      if (getUserRes.error) {
+        setLoading(false);
+        return { error: getUserRes.error.message || "Supabase user creation failed." };
+      }
+
+      // If we reach here, after Twilio-verified OTP, Supabase Auth now has the user and a session.
       setUser({ mobile: mobile, role: undefined });
       setLoading(false);
       return { error: null };
@@ -223,3 +262,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
