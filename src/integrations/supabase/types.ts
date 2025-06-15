@@ -170,7 +170,7 @@ export type Database = {
           start_date: string | null
           status: Database["public"]["Enums"]["booking_status"] | null
           total_amount: number
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           approved_at?: string | null
@@ -184,7 +184,7 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["booking_status"] | null
           total_amount: number
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           approved_at?: string | null
@@ -198,7 +198,7 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["booking_status"] | null
           total_amount?: number
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
