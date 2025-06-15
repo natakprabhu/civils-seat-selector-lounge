@@ -77,7 +77,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [waitlistPosition] = useState(0);
   const [hasPendingSeatChange] = useState(false);
 
-  const [bookings, setBookings] = React.useState<{ seat_id: string, status: "pending" | "approved", user_id: string }[]>([]);
+  const [bookings, setBookings] = React.useState<{ seat_id: string, status: "pending" | "approved" | "cancelled", user_id: string, subscription_end_date?: string }[]>([]);
+  const [seatHolds, setSeatHolds] = React.useState<{ seat_id: string, lock_expiry: string, user_id: string }[]>([]);
   const [bookingsLoading, setBookingsLoading] = React.useState(true);
   const [selectedSeat, setSelectedSeat] = React.useState<string | null>(null);
   const [showDialog, setShowDialog] = React.useState(false);
@@ -110,20 +111,33 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     };
     fetchProfile();
 
-    const fetchBookings = async () => {
+    const fetchBookingsAndHolds = async () => {
       setBookingsLoading(true);
-      const { data, error } = await supabase
+      
+      // Cleanup expired holds and bookings first
+      await supabase.rpc('cleanup_expired_holds_and_bookings');
+      
+      // Fetch bookings
+      const { data: bookingsData, error: bookingsError } = await supabase
         .from("seat_bookings")
-        .select("seat_id, status, user_id")
+        .select("seat_id, status, user_id, subscription_end_date")
         .in("status", ["pending", "approved"]);
+      
+      // Fetch active seat holds
+      const { data: holdsData, error: holdsError } = await supabase
+        .from("seat_holds")
+        .select("seat_id, lock_expiry, user_id")
+        .gt("lock_expiry", new Date().toISOString());
+      
       setBookingsLoading(false);
-      if (data) {
-        const filtered = data.filter(
+      
+      if (bookingsData) {
+        const filtered = bookingsData.filter(
           (b: any) => b.status === "pending" || b.status === "approved"
         ).map(
           (b: any) => ({
             ...b,
-            status: b.status as "pending" | "approved"
+            status: b.status as "pending" | "approved" | "cancelled"
           })
         );
         setBookings(filtered);
@@ -131,11 +145,22 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       } else {
         setBookings([]);
       }
-      if (error) {
-        console.error("[Fetch Bookings] Error:", error);
+      
+      if (holdsData) {
+        setSeatHolds(holdsData);
+        console.log("[Fetch Seat Holds] Active holds:", holdsData);
+      } else {
+        setSeatHolds([]);
+      }
+      
+      if (bookingsError) {
+        console.error("[Fetch Bookings] Error:", bookingsError);
+      }
+      if (holdsError) {
+        console.error("[Fetch Seat Holds] Error:", holdsError);
       }
     };
-    fetchBookings();
+    fetchBookingsAndHolds();
   }, [user]);
 
   // Check if user has ANY active booking (pending or approved) in seat_bookings table
@@ -181,27 +206,56 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
     console.log("[Booking Submit] user object:", user);
     console.log("[Booking Submit] user.id for insert:", user.id);
+    
+    // Calculate subscription end date (duration in months from now)
+    const subscriptionEndDate = new Date();
+    subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + details.duration);
+    
     console.log("[Booking Submit] Booking payload:", {
       user_id: user.id,
       seat_id: seat.id,
       duration_months: details.duration,
-      status: "pending"
+      status: "pending",
+      subscription_end_date: subscriptionEndDate.toISOString()
     });
 
-    const { error } = await supabase.from("seat_bookings").insert({
+    // Create booking and seat hold in a transaction-like manner
+    const { error: bookingError } = await supabase.from("seat_bookings").insert({
       user_id: user.id,
       seat_id: seat.id,
       duration_months: details.duration,
-      status: "pending"
+      status: "pending",
+      subscription_end_date: subscriptionEndDate.toISOString()
     });
+
+    if (!bookingError) {
+      // Create seat hold with 30-minute expiry
+      const lockExpiry = new Date();
+      lockExpiry.setMinutes(lockExpiry.getMinutes() + 30);
+      
+      const { error: holdError } = await supabase.from("seat_holds").insert({
+        user_id: user.id,
+        seat_id: seat.id,
+        lock_expiry: lockExpiry.toISOString()
+      });
+
+      if (holdError) {
+        console.error("[Seat Hold] Insert error:", holdError);
+      }
+    }
     
     setFormLoading(false);
-    if (!error) {
-      // Refresh bookings to update the seat map
+    if (!bookingError) {
+      // Refresh bookings and holds to update the seat map
       const { data: newBookings } = await supabase
         .from("seat_bookings")
-        .select("seat_id, status, user_id")
+        .select("seat_id, status, user_id, subscription_end_date")
         .in("status", ["pending", "approved"]);
+
+      const { data: newHolds } = await supabase
+        .from("seat_holds")
+        .select("seat_id, lock_expiry, user_id")
+        .gt("lock_expiry", new Date().toISOString());
 
       if (newBookings) {
         const filtered = newBookings.filter(
@@ -209,25 +263,30 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         ).map(
           (b: any) => ({
             ...b,
-            status: b.status as "pending" | "approved"
+            status: b.status as "pending" | "approved" | "cancelled"
           })
         );
         setBookings(filtered);
       }
+      
+      if (newHolds) {
+        setSeatHolds(newHolds);
+      }
+      
       setShowDialog(false);
       setSelectedSeat(null);
       toast({
         title: 'Booking Requested',
-        description: 'Your booking has been logged and is now pending approval. The seat will appear as pending (yellow) on the map and you cannot make another booking until this is processed by admin.',
+        description: 'Your booking has been logged with a 30-minute hold. The seat will appear as pending (yellow) on the map and you cannot make another booking until this is processed by admin.',
         variant: 'default'
       });
     } else {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to request booking.',
+        description: bookingError.message || 'Failed to request booking.',
         variant: 'destructive'
       });
-      console.error("[Booking Submit] Insert error:", error);
+      console.error("[Booking Submit] Insert error:", bookingError);
     }
   };
 
@@ -622,6 +681,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             <SeatSelection
               seats={seats}
               bookings={bookings}
+              seatHolds={seatHolds}
               userActiveBooking={userActiveBooking}
               selectedSeat={selectedSeat}
               onSeatSelect={handleSeatSelect}

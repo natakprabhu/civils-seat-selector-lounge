@@ -145,6 +145,7 @@ export type Database = {
           requested_at: string | null
           seat_id: string
           status: string | null
+          subscription_end_date: string | null
           total_amount: number | null
           user_id: string
         }
@@ -159,6 +160,7 @@ export type Database = {
           requested_at?: string | null
           seat_id: string
           status?: string | null
+          subscription_end_date?: string | null
           total_amount?: number | null
           user_id: string
         }
@@ -173,6 +175,7 @@ export type Database = {
           requested_at?: string | null
           seat_id?: string
           status?: string | null
+          subscription_end_date?: string | null
           total_amount?: number | null
           user_id?: string
         }
@@ -449,6 +452,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_holds_and_bookings: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       cleanup_expired_locks: {
         Args: Record<PropertyKey, never>
         Returns: undefined

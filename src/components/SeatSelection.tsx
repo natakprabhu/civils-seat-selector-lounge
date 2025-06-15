@@ -1,15 +1,16 @@
-
 import React, { useMemo } from "react";
 import SeatIcon from "./SeatIcon";
 import { Seat } from "@/hooks/useSeats";
 import SeatStatusLegend from "./SeatStatusLegend";
 
-type BookingStatus = "approved" | "pending";
-type SeatMap = Record<string, { status: BookingStatus; seatId: string; userId: string }>;
+type BookingStatus = "approved" | "pending" | "cancelled";
+type SeatMap = Record<string, { status: BookingStatus; seatId: string; userId: string; subscriptionEndDate?: string }>;
+type SeatHoldsMap = Record<string, { lockExpiry: string; userId: string }>;
 
 interface SeatSelectionProps {
   seats: Seat[];
-  bookings: { seat_id: string; status: BookingStatus; user_id: string }[];
+  bookings: { seat_id: string; status: BookingStatus; user_id: string; subscription_end_date?: string }[];
+  seatHolds: { seat_id: string; lock_expiry: string; user_id: string }[];
   userActiveBooking: boolean;
   onSeatSelect: (seatNumber: string) => void;
   selectedSeat: string | null;
@@ -40,19 +41,39 @@ const RIGHT_LAYOUT = [
 const getSeatStatus = (
   seatNumber: string,
   bookingsMap: SeatMap,
+  seatHoldsMap: SeatHoldsMap,
   selectedSeat: string | null,
   currentUserId?: string
 ): "booked" | "pending" | "vacant" | "selected" => {
   if (selectedSeat === seatNumber) return "selected";
   
   const booking = bookingsMap[seatNumber];
-  if (!booking) return "vacant";
+  const hold = seatHoldsMap[seatNumber];
+  const now = new Date();
   
-  // Show seat status based on booking status from seat_bookings table
-  if (booking.status === "pending") return "pending"; // Yellow (on hold)
-  if (booking.status === "approved") return "booked"; // Red (booked)
+  // 1. Booked (Red) - approved booking with active subscription
+  if (booking && booking.status === "approved") {
+    if (booking.subscriptionEndDate) {
+      const subscriptionEnd = new Date(booking.subscriptionEndDate);
+      if (subscriptionEnd > now) {
+        return "booked"; // Active subscription
+      }
+    } else {
+      // If no subscription_end_date, assume it's active (for backward compatibility)
+      return "booked";
+    }
+  }
   
-  return "vacant"; // Green (available)
+  // 2. On Hold (Yellow) - pending booking with active hold
+  if (booking && booking.status === "pending" && hold) {
+    const lockExpiry = new Date(hold.lockExpiry);
+    if (lockExpiry > now) {
+      return "pending"; // Active hold
+    }
+  }
+  
+  // 3. Available (Green) - no approved booking for current period and no active hold
+  return "vacant";
 };
 
 const getSeatByNumber = (seats: Seat[]) => {
@@ -101,6 +122,7 @@ const SeatItem: React.FC<{
 const SeatSelection: React.FC<SeatSelectionProps> = ({
   seats,
   bookings,
+  seatHolds,
   userActiveBooking,
   onSeatSelect,
   selectedSeat,
@@ -108,7 +130,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
 }) => {
   const seatsByNumber = useMemo(() => getSeatByNumber(seats), [seats]);
   
-  // Create bookings map based on seat_bookings table status
+  // Create bookings map based on seat_bookings table
   const bookingsMap: SeatMap = useMemo(() => {
     const map: SeatMap = {};
     bookings.forEach(b => {
@@ -117,12 +139,28 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
         map[seat.seat_number] = { 
           status: b.status, 
           seatId: seat.id,
-          userId: b.user_id 
+          userId: b.user_id,
+          subscriptionEndDate: b.subscription_end_date
         };
       }
     });
     return map;
   }, [bookings, seats]);
+
+  // Create seat holds map
+  const seatHoldsMap: SeatHoldsMap = useMemo(() => {
+    const map: SeatHoldsMap = {};
+    seatHolds.forEach(h => {
+      const seat = seats.find(s => s.id === h.seat_id);
+      if (seat) {
+        map[seat.seat_number] = {
+          lockExpiry: h.lock_expiry,
+          userId: h.user_id
+        };
+      }
+    });
+    return map;
+  }, [seatHolds, seats]);
 
   const handleSeatClick = (seatNumber: string) => {
     // Prevent any booking if user has ANY pending booking in seat_bookings table
@@ -141,7 +179,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             <div key={i} className="flex flex-row mb-1">
               {row.map(seatNum => {
                 const seat = seatsByNumber[seatNum];
-                const status = getSeatStatus(seatNum, bookingsMap, selectedSeat, currentUserId);
+                const status = getSeatStatus(seatNum, bookingsMap, seatHoldsMap, selectedSeat, currentUserId);
                 return (
                   <SeatItem
                     key={seatNum}
@@ -192,7 +230,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             <div key={i} className="flex flex-row mb-1">
               {row.map(seatNum => {
                 const seat = seatsByNumber[seatNum];
-                const status = getSeatStatus(seatNum, bookingsMap, selectedSeat, currentUserId);
+                const status = getSeatStatus(seatNum, bookingsMap, seatHoldsMap, selectedSeat, currentUserId);
                 return (
                   <SeatItem
                     key={seatNum}
