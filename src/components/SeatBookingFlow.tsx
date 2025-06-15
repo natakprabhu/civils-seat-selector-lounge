@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +7,8 @@ import BookingForm from './BookingForm';
 import { useSeats } from '@/hooks/useSeats';
 import { useBookings } from '@/hooks/useBookings';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SeatBookingFlowProps {
   selectedSeat: any;
@@ -21,6 +22,25 @@ const SeatBookingFlow: React.FC<SeatBookingFlowProps> = ({
   onBookingComplete
 }) => {
   const [showBookingForm, setShowBookingForm] = useState(false);
+  const [profile, setProfile] = useState<{ full_name: string, email: string, mobile: string } | null>(null);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("full_name, email, mobile")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!error && data) {
+          setProfile(data);
+        }
+      }
+    };
+    fetchProfile();
+  }, [user]);
+
   const { createBooking } = useBookings();
 
   const handleConfirmSelection = () => {
@@ -52,6 +72,14 @@ const SeatBookingFlow: React.FC<SeatBookingFlowProps> = ({
     }
   };
 
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+        Loading your profile...
+      </div>
+    );
+  }
+
   if (showBookingForm) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 flex items-center justify-center p-6">
@@ -65,6 +93,23 @@ const SeatBookingFlow: React.FC<SeatBookingFlowProps> = ({
               Back to Seat Details
             </Button>
           </div>
+          {/* User Details (read-only) */}
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 mb-4">
+            <h3 className="text-lg font-semibold text-white mb-2">Your Details</h3>
+            <div className="mb-2">
+              <label className="block text-slate-400 text-sm">Full Name</label>
+              <input className="bg-slate-900 border-none w-full text-white rounded px-3 py-2 mt-1" value={profile.full_name} disabled />
+            </div>
+            <div className="mb-2">
+              <label className="block text-slate-400 text-sm">Email</label>
+              <input className="bg-slate-900 border-none w-full text-white rounded px-3 py-2 mt-1 lowercase" value={profile.email} disabled />
+            </div>
+            <div>
+              <label className="block text-slate-400 text-sm">Mobile</label>
+              <input className="bg-slate-900 border-none w-full text-white rounded px-3 py-2 mt-1" value={profile.mobile} disabled />
+            </div>
+          </div>
+          {/* Pass rest of details to BookingForm if needed */}
           <BookingForm 
             selectedSeat={selectedSeat.seat_number}
             onSubmitBooking={handleSubmitBooking}

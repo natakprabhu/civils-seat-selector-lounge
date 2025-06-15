@@ -104,7 +104,7 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin + "/",
+            emailRedirectTo: "https://preview--civils-seat-selector-lounge.lovable.app/",
             data: {
               full_name: fullName.trim(),
               mobile: mobile.trim(),

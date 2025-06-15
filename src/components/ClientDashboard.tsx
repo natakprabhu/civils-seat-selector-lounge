@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,8 @@ import AllTransactions from './AllTransactions';
 import NoticeBoard from './NoticeBoard';
 import { useSeats } from '@/hooks/useSeats';
 import { useBookings } from '@/hooks/useBookings';
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   LogOut, 
   User, 
@@ -64,6 +66,23 @@ interface BookingData {
 }
 
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<{ full_name?: string } | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user?.id) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .maybeSingle();
+        setProfile(data || null);
+      }
+    };
+    fetchProfile();
+  }, [user]);
+
   const [currentView, setCurrentView] = useState<'dashboard' | 'seat-change' | 'transactions' | 'edit-profile' | 'booking-success' | 'my-booking' | 'extend-booking' | 'all-transactions' | 'notice-board'>('dashboard');
   const [selectedSeat, setSelectedSeat] = useState<string>('');
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -290,7 +309,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-white">अध्ययन Library</h1>
-                <p className="text-slate-400">Welcome back! Mobile: {userMobile}</p>
+                <p className="text-slate-400">Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}! Mobile: {userMobile}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
