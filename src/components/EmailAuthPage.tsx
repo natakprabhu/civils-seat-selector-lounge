@@ -34,19 +34,19 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
         variant: "destructive",
       });
     } else {
-      toast({
-        title: "Success",
-        description:
-          mode === "signup"
-            ? "Verification email sent! Check your inbox to verify your account."
-            : mode === "forgot"
-            ? "Password reset email sent. Check your inbox."
-            : "Login successful.",
-      });
-      if (mode === "login") {
+      if (mode === "signup") {
+        setMessage("Verification email sent! Check your inbox to verify your account.");
+      } else if (mode === "forgot") {
+        setMessage("Password reset email sent. Check your inbox.");
+      } else {
+        // Login successful: show toast, not inline message
+        toast({
+          title: "Success",
+          description: "Login successful.",
+        });
         onAuth();
       }
-      if (mode !== "login") setMessage("Check your inbox for further instructions.");
+      if (mode !== "login") setErrorText(null);
     }
   };
 
@@ -115,6 +115,14 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
             <p className="text-slate-400">Sign in with your email account</p>
           </CardHeader>
           <CardContent className="space-y-5 px-8 pb-8">
+            {/* Show inline success message, if any */}
+            {message && (
+              <div className="mb-3">
+                <div className="bg-green-600/90 text-white px-4 py-2 rounded-md text-center shadow font-medium text-base">
+                  {message}
+                </div>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="text-sm text-slate-300 font-medium">
@@ -180,9 +188,6 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
               <div className="text-sm text-center text-red-400">
                 {errorText}
               </div>
-            )}
-            {message && (
-              <div className="text-sm text-center text-green-400">{message}</div>
             )}
             <div className="flex flex-col items-center gap-1">
               {mode === "login" && (
