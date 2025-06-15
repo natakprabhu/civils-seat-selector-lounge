@@ -74,11 +74,16 @@ export const useBookings = () => {
 
   const createBooking = async (seatId: string, durationMonths: number, totalAmount: number) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated. Please log in to book a seat.");
+      }
+
       // Check if user already has an active booking
       const { data: existingBooking } = await supabase
         .from('seat_bookings')
         .select('id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .eq('user_id', user.id)
         .in('status', ['pending', 'approved'])
         .single();
 
@@ -93,7 +98,7 @@ export const useBookings = () => {
           seat_id: seatId,
           duration_months: durationMonths,
           total_amount: totalAmount,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: user.id,
           status: 'pending'
         });
 
@@ -108,18 +113,24 @@ export const useBookings = () => {
       await fetchBookings();
       return { error: null };
     } catch (error) {
-      return { error };
+      console.error('Error creating booking:', error);
+      return { error: error instanceof Error ? error : new Error(String(error)) };
     }
   };
 
   const approveBooking = async (bookingId: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated. Please log in to approve a booking.");
+      }
+
       const { error } = await supabase
         .from('seat_bookings')
         .update({
           status: 'approved',
           approved_at: new Date().toISOString(),
-          approved_by: (await supabase.auth.getUser()).data.user?.id
+          approved_by: user.id
         })
         .eq('id', bookingId);
 
@@ -137,7 +148,8 @@ export const useBookings = () => {
       await fetchBookings();
       return { error: null };
     } catch (error) {
-      return { error };
+      console.error('Error approving booking:', error);
+      return { error: error instanceof Error ? error : new Error(String(error)) };
     }
   };
 
@@ -164,7 +176,8 @@ export const useBookings = () => {
       await fetchBookings();
       return { error: null };
     } catch (error) {
-      return { error };
+      console.error('Error rejecting booking:', error);
+      return { error: error instanceof Error ? error : new Error(String(error)) };
     }
   };
 
