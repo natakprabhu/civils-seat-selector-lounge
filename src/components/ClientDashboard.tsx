@@ -189,8 +189,23 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         durationMonths,
         totalAmount
       );
-      if (bookingError) throw bookingError;
+      if (bookingError) {
+        // Better error message extraction
+        const errMsg =
+          typeof bookingError === 'string'
+            ? bookingError
+            : bookingError.message
+              ? bookingError.message
+              : JSON.stringify(bookingError);
 
+        toast({
+          title: "Error",
+          description: errMsg || "Failed to book seat.",
+          variant: "destructive"
+        });
+        setIsBookingSubmitting(false);
+        return;
+      }
       setShowBookingModal(false);
       setSelectedSeatId(null);
       setBookingFormDuration('');
@@ -202,9 +217,17 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         description: "Your seat has been locked for 1 hour. Request will be cancelled automatically if not approved in time.",
       });
     } catch (error: any) {
+      // Always show error in a human readable way
+      const errMsg =
+        typeof error === 'string'
+          ? error
+          : error?.message
+            ? error.message
+            : JSON.stringify(error);
+
       toast({
         title: "Error",
-        description: error.message || "Failed to book seat.",
+        description: errMsg || "Failed to book seat.",
         variant: "destructive"
       });
     }

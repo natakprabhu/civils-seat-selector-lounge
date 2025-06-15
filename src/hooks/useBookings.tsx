@@ -84,12 +84,11 @@ export const useBookings = () => {
         .select('id')
         .eq('user_id', user.id)
         .in('status', ['pending', 'approved'])
-        .maybeSingle(); // safe fetch
+        .maybeSingle();
       if (existingBooking) {
         throw new Error('You already have an active booking request. Please wait for approval or cancel your existing request.');
       }
 
-      // Create new pending booking (seat should already be locked before calling this)
       const { error } = await supabase
         .from('seat_bookings')
         .insert({
@@ -100,13 +99,17 @@ export const useBookings = () => {
           status: 'pending'
         });
 
-      // No need to update seat status again here, handled in seat lock
-      if (error) throw error;
-
+      if (error) throw new Error(error.message || "Unknown Supabase insert error");
       await fetchBookings();
       return { error: null };
     } catch (error) {
-      return { error: error instanceof Error ? error : new Error(String(error)) };
+      if (typeof error === "string") {
+        return { error: { message: error } };
+      }
+      if (error instanceof Error) {
+        return { error };
+      }
+      return { error: { message: JSON.stringify(error) } };
     }
   };
 
