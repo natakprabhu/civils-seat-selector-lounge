@@ -135,6 +135,7 @@ const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
                 selectedSeat={selectedSeat ? seats.find(s => s.seat_number === selectedSeat)?.id || null : null}
                 onSeatSelect={handleSeatSelect}
                 onConfirmSelection={() => {}}
+                bookingInProgress={false}
               />
               
               {selectedSeat && (
