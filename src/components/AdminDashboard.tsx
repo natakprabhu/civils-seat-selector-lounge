@@ -25,7 +25,7 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
+const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const { seats, loading: seatsLoading } = useSeats();
   const { bookings, loading, approveBooking, rejectBooking } = useBookings();
   const [currentView, setCurrentView] = useState<'dashboard' | 'notices' | 'seat-images'>('dashboard');
@@ -37,41 +37,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     !booking.notes?.includes('demo') &&
     !booking.notes?.includes('test')
   );
-
-  const handleApproveRequest = async (requestId: string) => {
-    const { error } = await approveBooking(requestId);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to approve request.",
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Request Approved",
-        description: "Booking request has been approved successfully.",
-      });
-    }
-  };
-
-  const handleRejectRequest = async (requestId: string) => {
-    const { error } = await rejectBooking(requestId);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to reject request.",
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Request Rejected",
-        description: "Booking request has been rejected.",
-        variant: "destructive"
-      });
-    }
-  };
 
   // --- SEAT COUNTS LOGIC FROM REAL DATABASE ---
   const totalSeats = seats.length;

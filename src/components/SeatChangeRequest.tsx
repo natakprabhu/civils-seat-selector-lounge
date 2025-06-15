@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, MapPin, CheckCircle, AlertTriangle } from 'lucide-react';
 import SeatSelection from './SeatSelection';
-import { useSeats } from '@/hooks/useSeats';
+import { useSeats, Seat } from '@/hooks/useSeats';
+import { ArrowLeft, MapPin } from 'lucide-react';
 
 interface SeatChangeRequestProps {
   currentSeat: string;
@@ -13,158 +13,105 @@ interface SeatChangeRequestProps {
   onSubmitChange: (newSeat: string) => void;
 }
 
-const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({ 
-  currentSeat, 
-  onBack, 
-  onSubmitChange 
+const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
+  currentSeat,
+  onBack,
+  onSubmitChange,
 }) => {
   const { seats, loading } = useSeats();
-  const [selectedSeat, setSelectedSeat] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasPendingRequest] = useState(false); // This would come from props/state
+  const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    if (!loading && seats.length > 0) {
+      // Initialize selected seat if currentSeat is valid
+      const initialSeat = seats.find(seat => seat.seat_number === currentSeat);
+      if (initialSeat) {
+        setSelectedSeat(initialSeat.id);
+      }
+    }
+  }, [currentSeat, loading, seats]);
 
   const handleSeatSelect = (seatId: string) => {
-    const seat = seats.find(s => s.id === seatId);
-    if (seat && seat.status === 'vacant') {
-      setSelectedSeat(seat.seat_number);
-    }
+    setSelectedSeat(seatId);
   };
 
-  const handleSubmitChange = async () => {
+  const handleSubmit = () => {
     if (!selectedSeat) {
       toast({
         title: "Error",
-        description: "Please select a new seat",
+        description: "Please select a new seat.",
         variant: "destructive"
       });
       return;
     }
 
-    setIsSubmitting(true);
-    
-    try {
-      // Mock API call - this would cancel any existing requests and create new one
-      setTimeout(() => {
-        onSubmitChange(selectedSeat);
-        toast({
-          title: "Request Submitted",
-          description: hasPendingRequest 
-            ? "Your previous seat change request has been cancelled and a new request has been submitted for admin approval."
-            : "Your seat change request has been submitted for admin approval.",
-        });
-        setIsSubmitting(false);
-      }, 1500);
-    } catch (error) {
+    if (!reason.trim()) {
       toast({
         title: "Error",
-        description: "Failed to submit seat change request.",
+        description: "Please provide a reason for the seat change.",
         variant: "destructive"
       });
-      setIsSubmitting(false);
+      return;
     }
+
+    onSubmitChange(selectedSeat);
+    toast({
+      title: "Request Submitted",
+      description: "Your seat change request has been submitted.",
+    });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 flex items-center justify-center">
-        <div className="text-white">Loading seats...</div>
-      </div>
-    );
-  }
+  const getSeatNumber = (seatId: string | null) => {
+    if (!seatId) return 'N/A';
+    const seat = seats.find(seat => seat.id === seatId);
+    return seat ? seat.seat_number : 'N/A';
+  };
 
+  // Replace broken usage with just seats prop
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center gap-4 mb-8">
-          <Button 
-            onClick={onBack}
-            className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
-          >
+          <Button onClick={onBack} className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            Back
           </Button>
           <h1 className="text-2xl font-bold text-white">Request Seat Change</h1>
         </div>
 
-        <div className="space-y-8">
-          {/* Pending Request Warning */}
-          {hasPendingRequest && (
-            <Card className="dashboard-card border-orange-500/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="w-5 h-5 text-orange-400" />
-                  <div>
-                    <p className="font-semibold text-white">Existing Request</p>
-                    <p className="text-sm text-slate-400">You have a pending seat change request. Submitting a new request will automatically cancel the previous one.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Current Seat Info */}
-          <Card className="dashboard-card">
-            <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                Current Seat Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
-                  <span className="font-bold text-lg">{currentSeat}</span>
-                </div>
-                <div>
-                  <p className="font-semibold">Your Current Seat: {currentSeat}</p>
-                  <Badge variant="secondary">Active</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* New Seat Selection */}
-          <Card className="dashboard-card">
-            <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
-              <CardTitle>Select New Seat</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <SeatSelection 
-                seats={seats}
-                selectedSeat={selectedSeat ? seats.find(s => s.seat_number === selectedSeat)?.id || null : null}
-                onSeatSelect={handleSeatSelect}
-                onConfirmSelection={() => {}}
-                bookingInProgress={false}
-                bookings={[]}   // <-- Pass an empty array; customize as needed if seat change requests should reference bookings
-                userId={undefined} // <-- Pass undefined or get userId if available here
+        <Card className="dashboard-card">
+          <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              Current Seat: {currentSeat}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">Reason for Change</label>
+              <Input
+                type="text"
+                placeholder="Why do you want to change your seat?"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="bg-slate-800 border-slate-600 text-white placeholder-slate-400"
               />
-              
-              {selectedSeat && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-slate-800/30 to-slate-900/30 rounded-lg border border-slate-700/50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="font-semibold text-white">Selected New Seat: {selectedSeat}</p>
-                        <p className="text-sm text-muted-foreground">Change from {currentSeat} to {selectedSeat}</p>
-                        {hasPendingRequest && (
-                          <p className="text-xs text-orange-400">This will cancel your pending request</p>
-                        )}
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={handleSubmitChange}
-                      disabled={isSubmitting}
-                      className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
-                    >
-                      {isSubmitting ? 'Submitting...' : 'Submit Change Request'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">Select New Seat</label>
+              <SeatSelection seats={seats} />
+            </div>
+
+            <Button
+              onClick={handleSubmit}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white"
+            >
+              Submit Request
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

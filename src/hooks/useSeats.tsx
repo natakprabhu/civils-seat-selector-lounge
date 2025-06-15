@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
 
+// Minimal Seat type for UI only
 export interface Seat {
   id: string;
   seat_number: string;
@@ -12,102 +12,22 @@ export interface Seat {
 }
 
 export const useSeats = () => {
-  const [seats, setSeats] = useState<Seat[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Dummy hardcoded data for demo/UI usage
+  const [seats] = useState<Seat[]>([
+    { id: '1', seat_number: 'A1', section: 'Main', row_number: '1', status: 'vacant', monthly_rate: 2500 },
+    { id: '2', seat_number: 'A2', section: 'Main', row_number: '1', status: 'booked', monthly_rate: 2500 },
+    { id: '3', seat_number: 'B1', section: 'Main', row_number: '2', status: 'maintenance', monthly_rate: 2500 },
+    { id: '4', seat_number: 'C1', section: 'East', row_number: '3', status: 'on_hold', monthly_rate: 2500 },
+  ]);
+  const loading = false;
 
-  const fetchSeats = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('seats')
-        .select('*')
-        .order('seat_number');
-
-      if (error) throw error;
-      
-      console.log('Fetched seats:', data);
-      setSeats(data || []);
-    } catch (error) {
-      console.error('Error fetching seats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSeats();
-
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('seats-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'seats'
-        },
-        (payload) => {
-          fetchSeats();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // lockSeat also takes current user
-  const lockSeat = async (seatId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: new Error('Not authenticated') };
-
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1); // 1-hour lock
-
-    // Clean expired locks before locking new
-    await supabase.rpc('cleanup_expired_locks');
-
-    const { error } = await supabase
-      .from('seat_locks')
-      .insert({
-        seat_id: seatId,
-        user_id: user.id,
-        expires_at: expiresAt.toISOString()
-      });
-
-    // Update the seat to on_hold after locking
-    if (!error) {
-      await supabase
-        .from('seats')
-        .update({ status: 'on_hold' })
-        .eq('id', seatId);
-    }
-    return { error };
-  };
-
-  // If user cancels or admin rejects, unlock the seat
-  const releaseSeatLock = async (seatId: string) => {
-    const { error } = await supabase
-      .from('seat_locks')
-      .delete()
-      .eq('seat_id', seatId);
-
-    // Update the seat back to vacant
-    if (!error) {
-      await supabase
-        .from('seats')
-        .update({ status: 'vacant' })
-        .eq('id', seatId);
-    }
-    return { error };
-  };
-
+  // All actions and Supabase logic removed
   return {
     seats,
     loading,
-    lockSeat,
-    releaseSeatLock,
-    refetch: fetchSeats
+    // stubs, not used
+    lockSeat: async () => ({ error: { message: 'Not implemented' } }),
+    releaseSeatLock: async () => ({ error: { message: 'Not implemented' } }),
+    refetch: () => {},
   };
 };
