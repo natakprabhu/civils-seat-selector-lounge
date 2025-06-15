@@ -28,6 +28,9 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
     mobile?: string;
   }>({});
 
+  // New: Show this screen after signup success ("showVerifyScreen")
+  const [showVerifyScreen, setShowVerifyScreen] = useState(false);
+
   // Helper: handle auth result & show toasts and user feedback
   const handleAuthResult = ({ error }: { error: any }) => {
     if (error) {
@@ -47,7 +50,7 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
       });
     } else {
       if (mode === "signup") {
-        setMessage("Verification email sent! Check your inbox to verify your account.");
+        setShowVerifyScreen(true);
       } else if (mode === "forgot") {
         setMessage("Password reset email sent. Check your inbox.");
       } else {
@@ -163,71 +166,91 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
             <p className="text-slate-400">Sign in with your email account</p>
           </CardHeader>
           <CardContent className="space-y-5 px-8 pb-8">
-            {/* Show inline success message, if any */}
-            {message && (
-              <div className="mb-3">
-                <div className="bg-green-600/90 text-white px-4 py-2 rounded-md text-center shadow font-medium text-base">
-                  {message}
+            {showVerifyScreen && mode === "signup" ? (
+              <div className="flex flex-col items-center justify-center min-h-[240px]">
+                <div className="bg-green-600/90 text-white px-6 py-4 rounded-xl text-center shadow font-semibold text-lg mb-4">
+                  📧 Verification email sent!
+                  <div className="mt-1 font-normal text-base text-white/95">
+                    Please check your inbox (and spam folder) for a link to verify your account. <br />
+                    After verifying, you can log in.
+                  </div>
                 </div>
+                <Button
+                  className="mt-4"
+                  onClick={() => { setShowVerifyScreen(false); setMode("login"); }}
+                >
+                  Back to Login
+                </Button>
               </div>
+            ) : (
+              <>
+                {/* Show inline success message, if any (forgot password) */}
+                {message && (
+                  <div className="mb-3">
+                    <div className="bg-green-600/90 text-white px-4 py-2 rounded-md text-center shadow font-medium text-base">
+                      {message}
+                    </div>
+                  </div>
+                )}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {mode === "signup" && (
+                    <>
+                      <EmailInput email={email} setEmail={setEmail} loading={loading} />
+                      <SignupExtraFields
+                        fullName={fullName}
+                        setFullName={setFullName}
+                        mobile={mobile}
+                        setMobile={setMobile}
+                        loading={loading}
+                        password={password}
+                        setPassword={setPassword}
+                        errors={fieldErrors}
+                      />
+                    </>
+                  )}
+                  {mode !== "signup" && (
+                    <>
+                      <EmailInput email={email} setEmail={setEmail} loading={loading} />
+                      <PasswordInput
+                        password={password}
+                        setPassword={setPassword}
+                        loading={loading}
+                        mode={mode}
+                      />
+                    </>
+                  )}
+                  <Button
+                    type="submit"
+                    className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white text-lg font-semibold shadow-lg border border-slate-600"
+                    disabled={
+                      loading ||
+                      !email ||
+                      (mode === "login" && !password) ||
+                      (mode === "signup" &&
+                        (!fullName ||
+                          !/^[A-Z ]{2,}$/.test(fullName) ||
+                          !mobile ||
+                          !/^[6-9]\d{9}$/.test(mobile) ||
+                          !password ||
+                          password.length < 6))
+                    }
+                  >
+                    {loading && <Loader2 className="animate-spin mr-2" />}
+                    {mode === "login"
+                      ? "Log in"
+                      : mode === "signup"
+                      ? "Create account"
+                      : "Send reset link"}
+                  </Button>
+                </form>
+                {errorText && (
+                  <div className="text-sm text-center text-red-400">
+                    {errorText}
+                  </div>
+                )}
+                <SwitchAuthModeLinks mode={mode} setMode={setMode} />
+              </>
             )}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === "signup" && (
-                <>
-                  <EmailInput email={email} setEmail={setEmail} loading={loading} />
-                  <SignupExtraFields
-                    fullName={fullName}
-                    setFullName={setFullName}
-                    mobile={mobile}
-                    setMobile={setMobile}
-                    loading={loading}
-                    password={password}
-                    setPassword={setPassword}
-                    errors={fieldErrors}
-                  />
-                </>
-              )}
-              {mode !== "signup" && (
-                <>
-                  <EmailInput email={email} setEmail={setEmail} loading={loading} />
-                  <PasswordInput
-                    password={password}
-                    setPassword={setPassword}
-                    loading={loading}
-                    mode={mode}
-                  />
-                </>
-              )}
-              <Button
-                type="submit"
-                className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white text-lg font-semibold shadow-lg border border-slate-600"
-                disabled={
-                  loading ||
-                  !email ||
-                  (mode === "login" && !password) ||
-                  (mode === "signup" &&
-                    (!fullName ||
-                      !/^[A-Z ]{2,}$/.test(fullName) ||
-                      !mobile ||
-                      !/^[6-9]\d{9}$/.test(mobile) ||
-                      !password ||
-                      password.length < 6))
-                }
-              >
-                {loading && <Loader2 className="animate-spin mr-2" />}
-                {mode === "login"
-                  ? "Log in"
-                  : mode === "signup"
-                  ? "Create account"
-                  : "Send reset link"}
-              </Button>
-            </form>
-            {errorText && (
-              <div className="text-sm text-center text-red-400">
-                {errorText}
-              </div>
-            )}
-            <SwitchAuthModeLinks mode={mode} setMode={setMode} />
           </CardContent>
         </Card>
       </div>

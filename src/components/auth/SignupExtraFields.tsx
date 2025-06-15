@@ -95,6 +95,7 @@ const SignupExtraFields: React.FC<SignupExtraFieldsProps> = ({
             onChange={e => setPassword(e.target.value)}
             required
             minLength={6}
+            maxLength={32}
             disabled={loading}
             autoComplete="new-password"
           />
@@ -107,6 +108,9 @@ const SignupExtraFields: React.FC<SignupExtraFieldsProps> = ({
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
+        </div>
+        <div className="text-xs text-slate-400 mt-1 ml-1">
+          Password must be 6-32 characters.
         </div>
       </div>
     </>

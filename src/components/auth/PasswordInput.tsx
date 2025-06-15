@@ -31,8 +31,12 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           autoComplete={mode === "login" ? "current-password" : "new-password"}
           required
           minLength={6}
+          maxLength={32}
           disabled={loading}
         />
+      </div>
+      <div className="text-xs text-slate-400 mt-1 ml-1">
+        Password must be 6-32 characters.
       </div>
     </div>
   );
