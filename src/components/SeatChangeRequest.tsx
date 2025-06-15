@@ -1,14 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
+import { ArrowLeft, MapPin, CheckCircle, AlertTriangle } from 'lucide-react';
 import SeatSelection from './SeatSelection';
 import { useSeats } from '@/hooks/useSeats';
-import { useSeatMapStatus } from '@/hooks/useSeatMapStatus';
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 
 interface SeatChangeRequestProps {
   currentSeat: string;
@@ -16,137 +13,158 @@ interface SeatChangeRequestProps {
   onSubmitChange: (newSeat: string) => void;
 }
 
-const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({ currentSeat, onBack, onSubmitChange }) => {
-  const { user } = useAuth();
-  const userId = user?.id;
-  const [reason, setReason] = useState('');
-  const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
-  const { seats, loading: seatsLoading } = useSeats();
-  const { seatStatuses, loading: seatStatusesLoading } = useSeatMapStatus("61559e4a-63b6-49ae-bdb4-17b046d3534f"); // Replace with actual show ID
-
-  useEffect(() => {
-    if (!seatsLoading && seats.length > 0) {
-      // You might want to pre-select the current seat if it's still available
-      // setSelectedSeat(currentSeat);
-    }
-  }, [seats, seatsLoading, currentSeat]);
+const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({ 
+  currentSeat, 
+  onBack, 
+  onSubmitChange 
+}) => {
+  const { seats, loading } = useSeats();
+  const [selectedSeat, setSelectedSeat] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasPendingRequest] = useState(false); // This would come from props/state
 
   const handleSeatSelect = (seatId: string) => {
-    setSelectedSeat(seatId);
+    const seat = seats.find(s => s.id === seatId);
+    if (seat && seat.status === 'vacant') {
+      setSelectedSeat(seat.seat_number);
+    }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmitChange = async () => {
     if (!selectedSeat) {
       toast({
         title: "Error",
-        description: "Please select a new seat.",
+        description: "Please select a new seat",
         variant: "destructive"
       });
       return;
     }
 
-    if (!reason.trim()) {
-      toast({
-        title: "Error",
-        description: "Please provide a reason for the seat change request.",
-        variant: "destructive"
-      });
-      return;
-    }
-
+    setIsSubmitting(true);
+    
     try {
-      // Insert seat change request into the database
-      const { error } = await supabase
-        .from('seat_change_requests')
-        .insert({
-          user_id: userId,
-          current_booking_id: null, // You might need to fetch the current booking ID
-          new_seat_id: selectedSeat,
-          reason: reason,
-          status: 'pending',
-          requested_at: new Date().toISOString()
+      // Mock API call - this would cancel any existing requests and create new one
+      setTimeout(() => {
+        onSubmitChange(selectedSeat);
+        toast({
+          title: "Request Submitted",
+          description: hasPendingRequest 
+            ? "Your previous seat change request has been cancelled and a new request has been submitted for admin approval."
+            : "Your seat change request has been submitted for admin approval.",
         });
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Success",
-        description: "Your seat change request has been submitted.",
-      });
-
-      onSubmitChange(selectedSeat); // Notify parent component
-    } catch (error: any) {
+        setIsSubmitting(false);
+      }, 1500);
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to submit request. Please try again.",
+        description: "Failed to submit seat change request.",
         variant: "destructive"
       });
+      setIsSubmitting(false);
     }
   };
 
-  if (seatsLoading || seatStatusesLoading) {
-    return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading seats...</div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        <Button variant="ghost" onClick={onBack} className="text-white">
-          &larr; Back to Dashboard
-        </Button>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex items-center gap-4 mb-8">
+          <Button 
+            onClick={onBack}
+            className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          <h1 className="text-2xl font-bold text-white">Request Seat Change</h1>
+        </div>
 
-        <Card className="dashboard-card">
-          <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
-            <CardTitle className="text-xl font-bold text-white">Request Seat Change</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="currentSeat" className="text-sm font-medium text-slate-300">Current Seat</Label>
-                <Input
-                  id="currentSeat"
-                  value={currentSeat || 'Not Assigned'}
-                  className="bg-slate-700 border-slate-600 text-white"
-                  readOnly
-                />
-              </div>
+        <div className="space-y-8">
+          {/* Pending Request Warning */}
+          {hasPendingRequest && (
+            <Card className="dashboard-card border-orange-500/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-orange-400" />
+                  <div>
+                    <p className="font-semibold text-white">Existing Request</p>
+                    <p className="text-sm text-slate-400">You have a pending seat change request. Submitting a new request will automatically cancel the previous one.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-              <div>
-                <Label htmlFor="reason" className="text-sm font-medium text-slate-300">Reason for Change</Label>
-                <Input
-                  id="reason"
-                  placeholder="Enter reason"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
+          {/* Current Seat Info */}
+          <Card className="dashboard-card">
+            <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Current Seat Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
+                  <span className="font-bold text-lg">{currentSeat}</span>
+                </div>
+                <div>
+                  <p className="font-semibold">Your Current Seat: {currentSeat}</p>
+                  <Badge variant="secondary">Active</Badge>
+                </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div>
-                <Label className="text-sm font-medium text-slate-300">Select New Seat</Label>
-                <SeatSelection
-                  seats={seats}
-                  seatStatuses={seatStatuses}
-                  selectedSeatId={selectedSeat}
-                  onSeatSelect={handleSeatSelect}
-                  bookingInProgress={false}
-                  myUserId={userId}
-                />
-              </div>
-
-              <div className="flex justify-between">
-                <Button variant="secondary" onClick={onBack}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSubmit}>
-                  Submit Request
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          {/* New Seat Selection */}
+          <Card className="dashboard-card">
+            <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
+              <CardTitle>Select New Seat</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <SeatSelection 
+                seats={seats}
+                selectedSeat={selectedSeat ? seats.find(s => s.seat_number === selectedSeat)?.id || null : null}
+                onSeatSelect={handleSeatSelect}
+                onConfirmSelection={() => {}}
+                bookingInProgress={false}
+                bookings={[]}   // <-- Pass an empty array; customize as needed if seat change requests should reference bookings
+                userId={undefined} // <-- Pass undefined or get userId if available here
+              />
+              
+              {selectedSeat && (
+                <div className="mt-6 p-4 bg-gradient-to-r from-slate-800/30 to-slate-900/30 rounded-lg border border-slate-700/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="font-semibold text-white">Selected New Seat: {selectedSeat}</p>
+                        <p className="text-sm text-muted-foreground">Change from {currentSeat} to {selectedSeat}</p>
+                        {hasPendingRequest && (
+                          <p className="text-xs text-orange-400">This will cancel your pending request</p>
+                        )}
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={handleSubmitChange}
+                      disabled={isSubmitting}
+                      className="bg-gradient-to-b from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white shadow-lg shadow-black/50 border border-slate-600"
+                    >
+                      {isSubmitting ? 'Submitting...' : 'Submit Change Request'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

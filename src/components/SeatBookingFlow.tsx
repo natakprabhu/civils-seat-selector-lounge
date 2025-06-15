@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,7 +46,15 @@ const SeatBookingFlow: React.FC<SeatBookingFlowProps> = ({
   const handleConfirmSelection = () => setShowBookingForm(true);
 
   const handleSubmitBooking = async (bookingData: any) => {
-    const { error } = await createBooking(selectedSeat.id, selectedSeat.id);
+    const durationMonths = parseInt(bookingData.duration);
+    const totalAmount = durationMonths * selectedSeat.monthly_rate;
+
+    const { error } = await createBooking(
+      selectedSeat.id,
+      durationMonths,
+      totalAmount
+    );
+
     if (error) {
       toast({
         title: "Error",

@@ -89,12 +89,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   
-  const { seats, loading: seatsLoading, refetch: refetchSeats } = useSeats();
-  const { bookings, refetch: refetchBookings, createBooking } = useBookings();
+  // Use real Supabase data
+  const { seats, loading: seatsLoading, lockSeat, releaseSeatLock, refetch: refetchSeats } = useSeats();
+  const { bookings, createBooking, refetch: refetchBookings } = useBookings();
   
   const [waitlistPosition] = useState(0);
   const [hasPendingSeatChange, setHasPendingSeatChange] = useState(false);
 
+  // Reset user booking data since all data is cleared
   const [userBooking, setUserBooking] = useState<BookingData>({
     seatNumber: '',
     name: 'User Name',
@@ -120,32 +122,43 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     seatId: ''
   });
 
+  // Calculate current booking and seat statistics using real-time database data
   const totalSeats = seats.length;
 
-  const bookedSeatsSet = new Set<string>();
+  // On Hold: booking rows where status is 'pending'
+  const onHoldBookings = bookings.filter(b => b.status === 'pending');
+  const onHold = onHoldBookings.length;
+
+  // Booked: seats that are marked as 'booked' either by seat status or by an approved booking
+  const bookedSeatsSet = new Set(
+    // Seats from main table that have status "booked"
+    seats.filter(s => s.status === 'booked').map(s => s.id)
+  );
   bookings.forEach(b => {
-    if (b.seat_id) {
+    if (b.status === 'approved') {
       bookedSeatsSet.add(b.seat_id);
     }
   });
   const booked = bookedSeatsSet.size;
 
-  const onHold = 0;
-  const availableSeats = totalSeats - booked;
+  // Available: totalSeats - onHold (pending bookings) - booked
+  const availableSeats = totalSeats - onHold - booked;
 
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [bookingFormDuration, setBookingFormDuration] = useState('');
   const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
 
+  // Only allow booking if the user has NO pending/approved booking
   const hasActiveBooking = bookings.some(
     b =>
-      b.user_id === user?.id
+      b.user_id === user?.id &&
+      (b.status === 'pending' || b.status === 'approved')
   );
 
+  // When a seat is selected, don’t open the modal! Only do so when confirm button is clicked
   const handleSeatSelect = (seatId: string) => {
     setSelectedSeatId(seatId);
   };
-
   const handleConfirmSelection = () => {
     setShowBookingModal(true);
   };
@@ -155,17 +168,39 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     setBookingFormDuration('');
   };
 
+  // Booking submit
   const handleBookingFormSubmit = async () => {
     if (!selectedSeatId || !bookingFormDuration || !user?.id) return;
     setIsBookingSubmitting(true);
     try {
+      // Step 1: Lock the seat (add to seat_locks, status on_hold)
+      const { error: lockError } = await lockSeat(selectedSeatId);
+      if (lockError) throw lockError;
+
+      const durationMonths = parseInt(bookingFormDuration);
+
+      // Step 2: Create booking (pending, status on_hold)
       const seat = seats.find(s => s.id === selectedSeatId);
       if (!seat) throw new Error('Seat not found');
-      const { error: bookingError } = await createBooking(selectedSeatId, seat.id);
+      const totalAmount = durationMonths * seat.monthly_rate;
+
+      const { error: bookingError } = await createBooking(
+        selectedSeatId,
+        durationMonths,
+        totalAmount
+      );
       if (bookingError) {
+        // Better error message extraction
+        const errMsg =
+          typeof bookingError === 'string'
+            ? bookingError
+            : bookingError.message
+              ? bookingError.message
+              : JSON.stringify(bookingError);
+
         toast({
           title: "Error",
-          description: bookingError.message || "Failed to book seat.",
+          description: errMsg || "Failed to book seat.",
           variant: "destructive"
         });
         setIsBookingSubmitting(false);
@@ -179,24 +214,36 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
       toast({
         title: "Booking Request Submitted",
-        description: "Seat booking request sent.",
+        description: "Your seat has been locked for 1 hour. Request will be cancelled automatically if not approved in time.",
       });
     } catch (error: any) {
+      // Always show error in a human readable way
+      const errMsg =
+        typeof error === 'string'
+          ? error
+          : error?.message
+            ? error.message
+            : JSON.stringify(error);
+
       toast({
         title: "Error",
-        description: error.message || "Failed to book seat.",
+        description: errMsg || "Failed to book seat.",
         variant: "destructive"
       });
     }
     setIsBookingSubmitting(false);
   };
 
+  // User cancels their pending booking
   const handleUserCancelBooking = async () => {
+    // Find my pending booking
     const myPending = bookings.find(
-      b => b.user_id === user?.id
+      b => b.user_id === user?.id && b.status === 'pending'
     );
     if (!myPending) return;
 
+    // Release lock and cancel booking
+    await releaseSeatLock(myPending.seat_id);
     await supabase
       .from('seat_bookings')
       .update({ status: 'cancelled' })
@@ -209,13 +256,29 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     setBookingFormDuration('');
     toast({
       title: "Booking Request Cancelled",
-      description: "Your booking request has been cancelled.",
+      description: "Your booking request and seat lock has been cancelled.",
     });
   };
 
+  // Show in My Booking Details if booking was cancelled due to expiry
   const showExpiredMsg = bookings.some(
-    b => b.user_id === user?.id
+    b => b.user_id === user?.id && b.status === 'cancelled'
   );
+
+  const handleSeatClick = (seatId: string) => {
+    console.log('Seat clicked:', seatId);
+    const seat = seats.find(s => s.id === seatId);
+    if (seat && seat.status === 'vacant') {
+      setSelectedSeat(seat.seat_number);
+      setBookingFormData({
+        ...bookingFormData,
+        seatId: seat.id
+      });
+      setShowBookingModal(true);
+    } else {
+      console.log('Seat not available or not found:', seat);
+    }
+  };
 
   const handleBookingSubmit = async () => {
     try {
@@ -229,20 +292,20 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       }
 
       console.log('Submitting booking request:', bookingFormData);
+      
+      const durationMonths = parseInt(bookingFormData.duration);
+      const totalAmount = durationMonths * 2500; // ₹2500 per month
 
-      // Only use seatId and showId for createBooking!
-      // const { error } = await createBooking(bookingFormData.seatId, durationMonths, totalAmount);
-      // Instead, find correct `showId` (assuming it's same as seatId).
-      const { error } = await createBooking(bookingFormData.seatId, bookingFormData.seatId);
-
+      const { error } = await createBooking(bookingFormData.seatId, durationMonths, totalAmount);
+      
       if (error) {
         throw error;
       }
-
+      
       setShowBookingModal(false);
       setCurrentView('booking-success');
       setBookingFormData({ name: '', email: '', duration: '', seatId: '' });
-
+      
       toast({
         title: "Booking Request Submitted",
         description: "Your seat booking request has been submitted successfully. Please wait for admin approval.",
@@ -257,18 +320,25 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     }
   };
 
-  const myBooking = bookings.find(b => b.user_id === user?.id);
+  // Find current user's latest booking (pending/approved)
+  const myBooking = bookings.find(
+    b => b.user_id === user?.id && (b.status === "pending" || b.status === "approved")
+  );
 
+  // Set up userBooking object for MyBookingDetails:
   useEffect(() => {
     if (myBooking) {
       setUserBooking({
-        seatNumber: myBooking.seat_id || "",
+        seatNumber: myBooking.seat?.seat_number || "",
         name: profile?.full_name || "User Name",
         mobile: profile?.mobile || userMobile,
         email: profile?.email || "",
-        duration: "",
-        submittedAt: myBooking.booked_at ? new Date(myBooking.booked_at).toLocaleString() : "",
-        paymentStatus: 'pending',
+        duration: myBooking.duration_months ? `${myBooking.duration_months} Month${myBooking.duration_months > 1 ? "s" : ""}` : "",
+        status: myBooking.status as "not_applied" | "pending" | "approved",
+        submittedAt: myBooking.requested_at
+          ? new Date(myBooking.requested_at).toLocaleString()
+          : "",
+        paymentStatus: 'pending', // Fix: Always include this property
         paidAmount: 0,
         validTill: "",
         remainingDays: 0,
@@ -278,6 +348,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         toTime: "9:00 PM"
       });
     }
+    // If no booking, clear details
     else {
       setUserBooking({
         seatNumber: "",
@@ -285,8 +356,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         mobile: profile?.mobile || userMobile,
         email: profile?.email || "",
         duration: "",
+        status: "not_applied",
         submittedAt: "",
-        paymentStatus: 'pending',
+        paymentStatus: 'pending', // Fix: Always include this property
         paidAmount: 0,
         validTill: "",
         remainingDays: 0,
@@ -319,47 +391,52 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         return;
       }
 
-      const { data: bookingsData } = await supabase
+      // Fetch seat bookings for user
+      const { data: bookings } = await supabase
         .from('seat_bookings')
         .select(`
-          id, seat_id, booked_at
-        `)
-        .eq('user_id', user.id)
-        .order('booked_at', { ascending: false });
-
-      const formattedBookings =
-        (bookingsData || []).map(b => ({
-          id: b.id,
-          type: 'New Booking' as const,
-          seatNumber: b.seat_id,
-          section: '',
-          duration: undefined,
-          totalAmount: undefined,
-          status: '',
-          requestedAt: b.booked_at,
-        }));
-
-      const { data: changes } = await supabase
-        .from('seat_change_requests')
-        .select(`
-          id, new_seat_id, requested_at, reason, fee_amount
+          id, seat_id, duration_months, total_amount, status, requested_at, seat:seats(seat_number, section)
         `)
         .eq('user_id', user.id)
         .order('requested_at', { ascending: false });
 
+      // Map to transaction format
+      const formattedBookings =
+        (bookings || []).map(b => ({
+          id: b.id,
+          type: 'New Booking' as const,
+          seatNumber: b.seat?.seat_number,
+          section: b.seat?.section,
+          duration: b.duration_months,
+          totalAmount: b.total_amount,
+          status: b.status,
+          requestedAt: b.requested_at,
+        }));
+
+      // Fetch seat change requests for user
+      const { data: changes } = await supabase
+        .from('seat_change_requests')
+        .select(`
+          id, new_seat_id, status, requested_at, reason, fee_amount, new_seat:seats(seat_number, section)
+        `)
+        .eq('user_id', user.id)
+        .order('requested_at', { ascending: false });
+
+      // Map to transaction format
       const formattedChanges =
         (changes || []).map(c => ({
           id: c.id,
           type: 'Change Request' as const,
-          seatNumber: c.new_seat_id,
-          section: '',
+          seatNumber: c.new_seat?.seat_number,
+          section: c.new_seat?.section,
           duration: undefined,
           totalAmount: c.fee_amount,
-          status: '',
+          status: c.status,
           requestedAt: c.requested_at,
           description: c.reason,
         }));
 
+      // Combine and sort by requestedAt descending
       const allTransactions = [...formattedBookings, ...formattedChanges]
         .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
 
@@ -395,12 +472,15 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     setCurrentView('dashboard');
   };
 
+  // State for confirmation dialog
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [transactionToCancel, setTransactionToCancel] = useState<string | null>(null);
 
+  // Delete transaction logic
   const handleConfirmCancelBooking = async () => {
     if (!transactionToCancel) return;
     try {
+      // Update booking by id only: set status to 'cancelled'
       const { error } = await supabase
         .from('seat_bookings')
         .update({ status: 'cancelled' })
@@ -424,16 +504,18 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     } finally {
       setShowCancelDialog(false);
       setTransactionToCancel(null);
+      // Optionally refetchBookings();
     }
   };
 
+  // Booking timer mini-component
   const BookingTimer: React.FC<{ requestedAt: string, label?: string }> = ({ requestedAt, label = "min left before fresh booking" }) => {
     const [timeLeft, setTimeLeft] = React.useState<number>(0);
 
     React.useEffect(() => {
       if (!requestedAt) return;
       const requested = new Date(requestedAt).getTime();
-      const expiresAt = requested + 60 * 60 * 1000;
+      const expiresAt = requested + 60 * 60 * 1000; // 1 hour after requested
       const tick = () => {
         const now = Date.now();
         setTimeLeft(Math.max(0, Math.floor((expiresAt - now) / 1000)));
@@ -538,29 +620,23 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     );
   }
 
+  // New: Helper function to decide if booking is still allowed (< 30min)
   function isTransactionWithinThirtyMinutes(requestedAt: string) {
     if (!requestedAt) return false;
     const requestedMs = new Date(requestedAt).getTime();
     const nowMs = Date.now();
-    return nowMs - requestedMs <= 30 * 60 * 1000;
+    return nowMs - requestedMs <= 30 * 60 * 1000; // 30 min in ms
   }
 
-  const filteredUserTransactions = bookings
-    .filter(b => b.user_id === user?.id)
-    .map(b => ({
-      id: b.id,
-      type: 'New Booking' as const,
-      seatNumber: b.seat_id,
-      section: '',
-      duration: undefined,
-      totalAmount: undefined,
-      status: '',
-      requestedAt: b.booked_at,
-      description: "",
-    }));
+  const filteredUserTransactions = userTransactions.filter(
+    txn =>
+      (!txn.requestedAt || isTransactionWithinThirtyMinutes(txn.requestedAt)) ||
+      txn.status !== "pending"
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
+      {/* Header with Dark Theme */}
       <div className="header-gradient shadow-2xl">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -662,6 +738,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        {/* Waitlist Info - Show at top if user has waitlist position */}
         {waitlistPosition > 0 && userBooking.status !== 'approved' && (
           <Card className="dashboard-card border-orange-500/50">
             <CardContent className="p-4">
@@ -676,6 +753,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </Card>
         )}
 
+        {/* Section 1: Condensed Stats Cards */}
         <div className="grid md:grid-cols-3 gap-4">
           <Card className="stat-card">
             <CardContent className="p-4 flex items-center justify-between">
@@ -714,6 +792,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </Card>
         </div>
 
+        {/* Section 2: Status Cards */}
         <div className="grid md:grid-cols-4 gap-4">
           <Card className="dashboard-card h-40">
             <CardContent className="p-4 flex flex-col justify-center items-center text-center h-full">
@@ -805,6 +884,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </Card>
         </div>
 
+        {/* Section 3: My Booking Details - Now shows booking & seat change transactions */}
         <Card className="dashboard-card">
           <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
             <CardTitle className="text-xl font-bold text-white flex items-center justify-between">
@@ -869,9 +949,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                           <IndianRupee className="w-4 h-4 text-green-400" />
                           {txn.totalAmount ? txn.totalAmount : 0}
                         </span>
+                        {/* Countdown Timer for pending bookings */}
                         {showTimer && (
                           <BookingTimer requestedAt={txn.requestedAt} />
                         )}
+                        {/* Cancel Booking Button for pending bookings in time */}
                         {txn.type === "New Booking" && txn.status === "pending" && showTimer && (
                           <AlertDialog open={showCancelDialog && transactionToCancel === txn.id} onOpenChange={(open) => {
                             setShowCancelDialog(open);
@@ -918,6 +1000,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </CardContent>
         </Card>
 
+        {/* Section 4: Live Seat Map */}
         <Card className="dashboard-card">
           <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
             <CardTitle className="text-xl font-bold text-white">Live Seat Map</CardTitle>
@@ -925,11 +1008,12 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           <CardContent className="p-6">
             <SeatSelection
               seats={seats}
-              seatStatuses={{}}
-              selectedSeatId={selectedSeatId}
+              selectedSeat={selectedSeatId}
               onSeatSelect={handleSeatSelect}
+              onConfirmSelection={handleConfirmSelection}
               bookingInProgress={hasActiveBooking}
-              myUserId={user?.id ?? ""}
+              bookings={bookings}
+              userId={user?.id}
             />
             {hasActiveBooking && (
               <p className="mt-4 text-yellow-300 text-sm">
@@ -940,15 +1024,18 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         </Card>
       </div>
 
+      {/* Booking Form Modal */}
       <Dialog open={showBookingModal} onOpenChange={handleCloseBookingModal}>
         <DialogContent className="max-w-md bg-slate-900 border border-slate-700 text-white">
           <DialogHeader>
             <DialogTitle className="text-slate-300">Booking Request</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Locked for 1hr message */}
             <div className="w-full h-16 bg-gradient-to-br from-amber-700 to-yellow-800 rounded-lg flex items-center justify-center border border-amber-400 text-yellow-200 shadow">
               <span>Your selected seat will be locked for 1 hour.</span>
             </div>
+            {/* Profile Details auto-filled */}
             <div>
               <label className="text-sm font-medium text-slate-300">Full Name</label>
               <input
@@ -1005,6 +1092,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </div>
         </DialogContent>
       </Dialog>
+      {/* Show expired/cancelled info in dashboard or modal */}
       {showExpiredMsg && (
         <div className="fixed left-1/2 -translate-x-1/2 bottom-10 z-40 bg-yellow-900 text-yellow-200 px-4 py-3 rounded-lg shadow-lg border border-yellow-500">
           Your previous booking was automatically cancelled due to timeout or admin rejection.
