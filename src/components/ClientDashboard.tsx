@@ -191,6 +191,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     }
 
     // Call a Postgres RPC to confirm what auth.uid() returns for this token
+    // @ts-expect-error: fetch_uid is a custom Supabase function that isn't typed yet
     const { data: authUidRow, error: authUidError } = await supabase.rpc('fetch_uid', {});
     if (authUidError) {
       console.warn("[Booking Submit][Debug] fetch_uid RPC error:", authUidError);
