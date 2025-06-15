@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { randomPassword, SUPABASE_FUNCTIONS_BASE } from "./helpers";
@@ -30,8 +31,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchProfile = async () => {
     setLoading(true);
     try {
+      console.debug("[AuthProvider] fetchProfile: fetching user...");
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        console.debug("[AuthProvider] fetchProfile: no user found.");
         setUserProfile({ full_name: "", email: "", mobile: "" });
         setLoading(false);
         return;
@@ -47,7 +50,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           ? { full_name: "", email: "", mobile: user.phone || "" }
           : data
       );
-    } catch {
+      if (error) {
+        console.debug("[AuthProvider] fetchProfile: profile fetch error", error);
+      } else {
+        console.debug("[AuthProvider] fetchProfile: profile data", data);
+      }
+    } catch (err) {
+      console.debug("[AuthProvider] fetchProfile: exception", err);
       setUserProfile({ full_name: "", email: "", mobile: "" });
     }
     setLoading(false);
@@ -57,8 +66,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const completeProfile = async (fullName: string, email: string) => {
     setLoading(true);
     try {
+      console.debug("[AuthProvider] completeProfile: update", { fullName, email });
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        console.debug("[AuthProvider] completeProfile: no user found");
         setUserProfile({ full_name: "", email: "", mobile: "" });
         setLoading(false);
         return { error: null };
@@ -69,13 +80,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', user.id);
 
       if (error) {
+        console.debug("[AuthProvider] completeProfile: update error", error);
         setLoading(false);
         return { error: error.message || "Failed to update profile." };
       }
       await fetchProfile();
       setLoading(false);
       return { error: null };
-    } catch {
+    } catch (err) {
+      console.debug("[AuthProvider] completeProfile: exception", err);
       setLoading(false);
       return { error: "Failed to update profile." };
     }
@@ -83,7 +96,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Auth State Change (login/logout/session)
   useEffect(() => {
+    console.debug("[AuthProvider] useEffect: setting up auth state listener");
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.debug("[AuthProvider] onAuthStateChange event", { event, session });
       if (session?.user) {
         setUser({ mobile: session.user.phone || "", role: undefined });
         setTimeout(fetchProfile, 0);
@@ -94,13 +109,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.debug("[AuthProvider] getSession returns", { session });
       if (session?.user) {
         setUser({ mobile: session.user.phone || "", role: undefined });
         fetchProfile();
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.debug("[AuthProvider] useEffect cleanup: unsubscribing");
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Send OTP: always use signInWithOtp, try login flow first
@@ -108,30 +127,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       const phone = mobile.startsWith('+') ? mobile : `+91${mobile}`;
+      console.debug("[AuthProvider] sendOtp: trying login OTP for", phone);
       let result = await supabase.auth.signInWithOtp({ phone, options: { shouldCreateUser: false } });
+      console.debug("[AuthProvider] signInWithOtp login attempt result", result);
 
       // If user doesn't exist, try registration mode
       if (
         result.error && 
         result.error.message && 
-        result.error.message.toLowerCase().includes("signups not allowed for otp") // message from supabase
+        result.error.message.toLowerCase().includes("signups not allowed for otp")
       ) {
-        // This means user does not exist; try to create
+        console.debug("[AuthProvider] sendOtp: user not found, trying registration OTP");
         result = await supabase.auth.signInWithOtp({ phone, options: { shouldCreateUser: true } });
+        console.debug("[AuthProvider] signInWithOtp registration attempt result", result);
         if (result.error) {
           setLoading(false);
+          console.debug("[AuthProvider] sendOtp: registration OTP error", result.error);
           return { error: result.error.message || "Unable to send OTP. Please try again." };
         }
       }
       // If error but not "signups not allowed", report it
       if (result.error) {
         setLoading(false);
+        console.debug("[AuthProvider] sendOtp: error sending OTP", result.error);
         return { error: result.error.message || "Unable to send OTP. Please try again." };
       }
       setLoading(false);
+      console.debug("[AuthProvider] sendOtp: OTP sent successfully");
       return { error: null };
     } catch (error: any) {
       setLoading(false);
+      console.debug("[AuthProvider] sendOtp: exception", error);
       return { error: "Failed to send OTP. Please try again." };
     }
   };
@@ -141,11 +167,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       const phone = mobile.startsWith('+') ? mobile : `+91${mobile}`;
+      console.debug("[AuthProvider] verifyOtp: verifying OTP for", phone, otp);
       const { data, error } = await supabase.auth.verifyOtp({
         phone,
         token: otp,
         type: 'sms'
       });
+      console.debug("[AuthProvider] verifyOtp result", { data, error });
 
       if (error) {
         setLoading(false);
@@ -153,22 +181,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (error.message && error.message.toLowerCase().includes("invalid or expired otp")) {
           errMsg = "Invalid or expired OTP. Please resend and try again.";
         }
+        console.debug("[AuthProvider] verifyOtp: error", error);
         return { error: errMsg };
       }
 
       // Handle session
       if (data?.session && data.session.user) {
         setUser({ mobile: data.session.user.phone || "", role: undefined });
-        setTimeout(fetchProfile, 0); // fetch profile after login
+        setTimeout(fetchProfile, 0);
+        console.debug("[AuthProvider] verifyOtp: user session active, user set");
       } else {
         setUser(null);
         setUserProfile(null);
+        console.debug("[AuthProvider] verifyOtp: no valid user session, clearing user context");
       }
 
       setLoading(false);
       return { error: null };
     } catch (error: any) {
       setLoading(false);
+      console.debug("[AuthProvider] verifyOtp: exception", error);
       return { error: "Verification failed. Please check your details and try again." };
     }
   };
@@ -178,6 +210,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     setUser(null);
     setUserProfile(null);
+    console.debug("[AuthProvider] signOut: user signed out");
   };
 
   return (
