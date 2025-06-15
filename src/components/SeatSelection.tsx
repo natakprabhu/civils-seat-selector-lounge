@@ -55,45 +55,43 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   bookings,
   userId,
 }) => {
-  // Find pending seat for this user (for on_hold highlight)
-  let pendingSeatId: string | null = null;
+  // Track user's own pending booking (for highlight)
+  let myPendingSeatId: string | null = null;
   if (bookings && userId) {
     const pendingBooking = bookings.find(
       (b) => b.user_id === userId && b.status === "pending"
     );
     if (pendingBooking) {
-      pendingSeatId = pendingBooking.seat_id;
+      myPendingSeatId = pendingBooking.seat_id;
     }
   }
 
-  // For easier lookup by seat_number
   const seatsByNumber = getSeatByNumber(seats);
 
-  /** Helper to get status for seat (selected, vacant, on_hold, booked) */
+  /** Get seat status */
   function getSeatStatus(seat: Seat): 'vacant' | 'selected' | 'pending' | 'booked' {
-    // Selected in this UI
     if (selectedSeat && seat.id === selectedSeat) return 'selected';
-    // Pending for this user
-    if (pendingSeatId && seat.id === pendingSeatId && seat.status !== 'booked') return 'pending';
-    // Underlying status
-    if (seat.status === 'booked') return 'booked';
+    // Always show on_hold to all users (pending)
     if (seat.status === 'on_hold') return 'pending';
+    // Booked
+    if (seat.status === 'booked') return 'booked';
     return 'vacant';
   }
 
-  // Aisle label styling using tailwind: rotate, vertical writing, faded
-  // Stairs and Washroom boxes
+  // This disables only for those who have booking in progress
+  const disableSelection = bookingInProgress;
+
   return (
     <div className="w-full flex justify-center items-stretch mt-2 gap-4 flex-wrap relative min-h-[70vh]">
       {/* Left block */}
       <div className="flex flex-col items-end relative min-h-[70vh]">
-        {/* Seat rows */}
+        {/* Left seat rows */}
         {LEFT_LAYOUT.map((row, i) => (
           <div key={i} className="flex flex-row mb-1">
             {row.map((seatNum) => {
               const seat = seatsByNumber[seatNum];
               if (!seat) {
-                // Render placeholder (empty/filler seat)
+                // Placeholder seat
                 return (
                   <div
                     key={seatNum}
@@ -108,32 +106,40 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
                     seatNumber={seat.seat_number}
                     status={status}
                     onClick={() =>
-                      !bookingInProgress &&
+                      !disableSelection &&
                       status === "vacant" &&
                       onSeatSelect(seat.id)
                     }
-                    disabled={bookingInProgress || status !== "vacant"}
+                    disabled={disableSelection || status !== "vacant"}
                   />
                 </div>
               );
             })}
           </div>
         ))}
-        {/* Stairs and Washroom, stretch to bottom */}
-        <div className="flex w-full absolute left-0 right-0 bottom-0 mt-2 pointer-events-none" style={{height: "calc(100% - 15rem)"}}>
-          <div className="flex-1 flex justify-end items-end h-full">
-            <div className="w-full h-full bg-gradient-to-t from-slate-400 to-slate-100 border rounded text-sm font-bold flex items-center justify-center shadow box-border pointer-events-auto min-h-[110px]">
+        {/* Stairs and Washroom: exactly under the last row, stretch to bottom */}
+        <div
+          className="flex w-full absolute left-0 right-0"
+          style={{
+            top: `calc(100% + 8px)`,
+            minHeight: "110px",
+            height: "calc(100vh - 340px)",
+            // Adjust height based on need for page
+          }}
+        >
+          <div className="flex-1 flex items-stretch">
+            <div className="w-full h-full bg-gradient-to-t from-slate-400 to-slate-100 border rounded text-sm font-bold flex items-center justify-center shadow box-border pointer-events-auto min-h-[110px] text-black">
               Stairs
             </div>
           </div>
-          <div className="flex-1 flex items-end h-full">
-            <div className="w-full h-full bg-slate-200 border rounded text-sm font-bold flex items-center justify-center shadow box-border pointer-events-auto min-h-[110px]">
+          <div className="flex-1 flex items-stretch">
+            <div className="w-full h-full bg-slate-200 border rounded text-sm font-bold flex items-center justify-center shadow box-border pointer-events-auto min-h-[110px] text-black">
               Washroom
             </div>
           </div>
         </div>
       </div>
-      {/* Aisle/passage with multiple labels */}
+      {/* Aisle section with multiple labels */}
       <div className="relative flex flex-col items-center mx-2 flex-grow h-full min-h-[70vh]">
         <div className="absolute inset-x-0 top-0 bottom-0 flex flex-col justify-between items-center z-0">
           {Array.from({ length: NUM_AISLE_LABELS }).map((_, idx) => (
@@ -149,11 +155,11 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
               </span>
             </div>
           ))}
-          {/* Passage side lines */}
+          {/* Aisle lines at left/right */}
           <div className="absolute inset-y-0 left-1 w-0.5 bg-gray-300 rounded z-[-1]" />
           <div className="absolute inset-y-0 right-1 w-0.5 bg-gray-300 rounded z-[-1]" />
         </div>
-        {/* Invisible block for alignment/space */}
+        {/* For vertical space */}
         <div className="flex-1" />
       </div>
       {/* Right block */}
@@ -177,11 +183,11 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
                     seatNumber={seat.seat_number}
                     status={status}
                     onClick={() =>
-                      !bookingInProgress &&
+                      !disableSelection &&
                       status === "vacant" &&
                       onSeatSelect(seat.id)
                     }
-                    disabled={bookingInProgress || status !== "vacant"}
+                    disabled={disableSelection || status !== "vacant"}
                   />
                 </div>
               );
