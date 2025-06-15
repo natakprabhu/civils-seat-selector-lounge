@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, MapPin, IndianRupee, Calendar, CheckCircle } from 'lucide-react';
 import BookingForm from './BookingForm';
-import { useSeats } from '@/hooks/useSeats';
 import { useBookings } from '@/hooks/useBookings';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from "@/hooks/useAuth";
@@ -43,9 +43,7 @@ const SeatBookingFlow: React.FC<SeatBookingFlowProps> = ({
 
   const { createBooking } = useBookings();
 
-  const handleConfirmSelection = () => {
-    setShowBookingForm(true);
-  };
+  const handleConfirmSelection = () => setShowBookingForm(true);
 
   const handleSubmitBooking = async (bookingData: any) => {
     const durationMonths = parseInt(bookingData.duration);
@@ -109,7 +107,6 @@ const SeatBookingFlow: React.FC<SeatBookingFlowProps> = ({
               <input className="bg-slate-900 border-none w-full text-white rounded px-3 py-2 mt-1" value={profile.mobile} disabled />
             </div>
           </div>
-          {/* Pass rest of details to BookingForm if needed */}
           <BookingForm 
             selectedSeat={selectedSeat.seat_number}
             onSubmitBooking={handleSubmitBooking}
