@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -192,7 +191,7 @@ const MyBookingDetails: React.FC<MyBookingDetailsProps> = ({
               <Receipt className="w-4 h-4 mr-2" />
               View All Transactions
             </Button>
-            {/* Show Cancel Request if status is pending */}
+            {/* Show Cancel Request ONLY if status is 'pending' (not for 'approved') */}
             {userBooking.status === 'pending' && onCancelRequest && (
               <Button
                 onClick={handleCancel}
@@ -211,4 +210,3 @@ const MyBookingDetails: React.FC<MyBookingDetailsProps> = ({
 };
 
 export default MyBookingDetails;
-

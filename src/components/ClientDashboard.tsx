@@ -240,16 +240,23 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       (b) => ['pending', 'approved'].includes(b.status)
     );
     if (!myBooking) {
-      // No active booking: reset UI
+      // No active or pending booking: reset UI with allowed types
       setUserBooking((prev) => ({
         ...prev,
         status: 'not_applied',
         seatNumber: '',
         planDetails: '',
-        // ... default values for other fields
+        submittedAt: '',
+        validTill: '',
+        remainingDays: 0,
+        startDate: '',
+        paidAmount: 0,
+        paymentStatus: 'pending',
+        paidOn: undefined,
+        paymentMethod: undefined,
       }));
     } else {
-      // Map booking data to our state model
+      // Map booking data to our state model, avoid unknown status
       setUserBooking((prev) => ({
         ...prev,
         seatNumber: myBooking.seat?.seat_number || '',
@@ -257,16 +264,23 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         email: myBooking.profile?.email || prev.email,
         mobile: myBooking.profile?.mobile || prev.mobile,
         duration: myBooking.duration_months ? `${myBooking.duration_months}` : '',
-        status: myBooking.status,
+        status:
+          myBooking.status === 'pending'
+            ? 'pending'
+            : myBooking.status === 'approved'
+            ? 'approved'
+            : 'not_applied',
         submittedAt: myBooking.requested_at,
         paymentStatus: 'pending', // Not tracked here
         paidAmount: undefined,
         paidOn: undefined,
         paymentMethod: undefined,
-        validTill: myBooking.end_date || '',
+        validTill: myBooking.end_date ? `${myBooking.end_date}` : '',
         remainingDays: undefined,
-        startDate: myBooking.start_date || '',
-        planDetails: `${myBooking.duration_months} Month${myBooking.duration_months > 1 ? 's' : ''}`,
+        startDate: myBooking.start_date ? `${myBooking.start_date}` : '',
+        planDetails: myBooking.duration_months
+          ? `${myBooking.duration_months} Month${myBooking.duration_months > 1 ? 's' : ''}`
+          : '',
       }));
     }
   };
@@ -274,10 +288,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   // Cancel active/pending request handler
   const handleCancelRequest = async () => {
     try {
-      // Find the active/pending booking
-      const myBooking = bookings.find(
-        (b) => ['pending', 'approved'].includes(b.status)
-      );
+      // Find only the pending booking (waiting for approval)
+      const myBooking = bookings.find((b) => b.status === 'pending');
       if (!myBooking) return;
       const { error } = await rejectBooking(myBooking.id);
       if (error) throw error;
