@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -422,6 +422,75 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     fetchUserTransactions();
   }, [user?.id]);
 
+  const [transactionTimers, setTransactionTimers] = useState<{[txnId: string]: number}>({});
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Helper: returns the expiry timestamp for a booking/change request (assuming 1 hour for bookings)
+  const getExpiryTime = (txn: any) => {
+    if (!txn.requestedAt) return null;
+    // 1 hour (3600 seconds) lock for bookings, adjust as needed for seat changes
+    return new Date(txn.requestedAt).getTime() + 3600 * 1000; 
+  };
+
+  // Initialize and update timers per transaction
+  useEffect(() => {
+    if (!userTransactions.length) return;
+
+    // Set initial remaining time for each pending transaction
+    const updateTimers = () => {
+      const now = Date.now();
+      const timers: {[txnId: string]: number} = {};
+      userTransactions.forEach(txn => {
+        if (txn.status === "pending" && getExpiryTime(txn)) {
+          const msLeft = getExpiryTime(txn)! - now;
+          timers[txn.id] = msLeft > 0 ? msLeft : 0;
+        }
+      });
+      setTransactionTimers(timers);
+    };
+
+    // Initial call
+    updateTimers();
+
+    // Set interval for live update
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = setInterval(updateTimers, 1000);
+
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, [userTransactions]);
+
+  // Cancel Booking handler
+  const handleCancelBookingTxn = async (txnId: string, txnType: string) => {
+    try {
+      if (txnType === "New Booking") {
+        // Cancel booking in seat_bookings
+        await supabase.from('seat_bookings').update({ status: 'cancelled' }).eq('id', txnId);
+      } else if (txnType === "Change Request") {
+        await supabase.from('seat_change_requests').update({ status: 'cancelled' }).eq('id', txnId);
+      }
+      toast({
+        title: "Cancelled",
+        description: "Your request has been cancelled.",
+      });
+      await refetchBookings();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel.",
+        variant: "destructive"
+      });
+    }
+  };
+  // Prioritize action (dummy handler)
+  const handlePrioritizeBookingTxn = (txnId: string) => {
+    toast({
+      title: "Request Prioritized",
+      description: "Your booking has been prioritized (Mock action).",
+    });
+  };
+
   const handleRequestSeatChange = () => {
     if (hasPendingSeatChange) {
       toast({
@@ -806,48 +875,93 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               </div>
             ) : (
               <div className="divide-y divide-slate-800">
-                {userTransactions.map(txn => (
-                  <div key={txn.id} className="py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <div>
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mr-2
-                        ${txn.type === 'New Booking' ? 'bg-blue-800 text-blue-200' : 'bg-violet-800 text-violet-200'}
-                      `}>
-                        {txn.type}
-                      </span>
-                      <span className="text-sm text-white font-medium">
-                        {txn.type === "New Booking" ? (
-                          <>
-                            {txn.seatNumber ? `Seat ${txn.seatNumber}` : 'No seat'}{txn.section ? ` (${txn.section})` : ''} •{" "}
-                            {txn.duration ? `${txn.duration} month${txn.duration > 1 ? 's' : ''}` : ''}
-                          </>
-                        ) : (
-                          <>
-                            Change to {txn.seatNumber ? `Seat ${txn.seatNumber}` : 'new seat'}{txn.section ? ` (${txn.section})` : ''} 
-                            {txn.description ? <> • <span className="italic">{txn.description}</span></> : null}
-                          </>
+                {userTransactions.map(txn => {
+                  // Timer logic in min:sec
+                  let timerStr = "";
+                  let timeLeft = transactionTimers[txn.id];
+                  if (txn.status === "pending" && timeLeft !== undefined) {
+                    if (timeLeft > 0) {
+                      const min = Math.floor(timeLeft / 1000 / 60);
+                      const sec = Math.floor((timeLeft / 1000) % 60);
+                      timerStr = `${min}:${sec.toString().padStart(2, '0')} left before fresh booking`;
+                    } else {
+                      timerStr = `Expired`;
+                    }
+                  }
+
+                  // Render
+                  return (
+                    <div key={txn.id} className="py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                      <div>
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mr-2
+                          ${txn.type === 'New Booking' ? 'bg-blue-800 text-blue-200' : 'bg-violet-800 text-violet-200'}
+                        `}>
+                          {txn.type}
+                        </span>
+                        <span className="text-sm text-white font-medium">
+                          {txn.type === "New Booking" ? (
+                            <>
+                              {txn.seatNumber ? `Seat ${txn.seatNumber}` : 'No seat'}{txn.section ? ` (${txn.section})` : ''} •{" "}
+                              {txn.duration ? `${txn.duration} month${txn.duration > 1 ? 's' : ''}` : ''}
+                            </>
+                          ) : (
+                            <>
+                              Change to {txn.seatNumber ? `Seat ${txn.seatNumber}` : 'new seat'}{txn.section ? ` (${txn.section})` : ''} 
+                              {txn.description ? <> • <span className="italic">{txn.description}</span></> : null}
+                            </>
+                          )}
+                        </span>
+                        {/* Timer display */}
+                        {timerStr && (
+                          <div className={`ml-1 text-xs mt-1 ${timerStr === "Expired" ? "text-red-500" : "text-amber-400"}`}>
+                            {timerStr}
+                          </div>
                         )}
-                      </span>
+                      </div>
+                      <div className="flex flex-col md:flex-row md:items-center gap-2 text-sm">
+                        <span className="text-slate-400">
+                          {txn.requestedAt ? new Date(txn.requestedAt).toLocaleString() : ""}
+                        </span>
+                        <Badge
+                          variant={
+                            txn.status === 'approved' ? 'default'
+                            : txn.status === 'pending' ? 'secondary'
+                            : 'destructive'
+                          }
+                        >
+                          {txn.status.charAt(0).toUpperCase() + txn.status.slice(1)}
+                        </Badge>
+                        <span className="flex items-center gap-1">
+                          <IndianRupee className="w-4 h-4 text-green-400" />
+                          {txn.totalAmount ? txn.totalAmount : 0}
+                        </span>
+                        {/* Show Cancel/Prioritize Actions for pending only */}
+                        {(txn.status === 'pending') && (
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-400 border-red-800"
+                              onClick={() => handleCancelBookingTxn(txn.id, txn.type)}
+                            >
+                              Cancel
+                            </Button>
+                            {txn.type === "New Booking" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-amber-400 border-amber-700"
+                                onClick={() => handlePrioritizeBookingTxn(txn.id)}
+                              >
+                                Prioritize
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-col md:flex-row md:items-center gap-2 text-sm">
-                      <span className="text-slate-400">
-                        {txn.requestedAt ? new Date(txn.requestedAt).toLocaleString() : ""}
-                      </span>
-                      <Badge
-                        variant={
-                          txn.status === 'approved' ? 'default'
-                          : txn.status === 'pending' ? 'secondary'
-                          : 'destructive'
-                        }
-                      >
-                        {txn.status.charAt(0).toUpperCase() + txn.status.slice(1)}
-                      </Badge>
-                      <span className="flex items-center gap-1">
-                        <IndianRupee className="w-4 h-4 text-green-400" />
-                        {txn.totalAmount ? txn.totalAmount : 0}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
