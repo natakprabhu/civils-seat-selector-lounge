@@ -309,7 +309,18 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-white">अध्ययन Library</h1>
-                <p className="text-slate-400">Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}! Mobile: {userMobile}</p>
+                <p
+                  data-lov-id="src/components/ClientDashboard.tsx:312:16"
+                  data-lov-name="p"
+                  data-component-path="src/components/ClientDashboard.tsx"
+                  data-component-line="312"
+                  data-component-file="ClientDashboard.tsx"
+                  data-component-name="p"
+                  data-component-content='{"text":"Welcome back ! Mobile:","className":"text-slate-400"}'
+                  className="text-slate-400"
+                >
+                  {`WELCOME ${(profile?.full_name || 'USER').toUpperCase()}`}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
