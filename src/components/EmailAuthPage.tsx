@@ -17,7 +17,6 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [mobile, setMobile] = useState("");
   const [message, setMessage] = useState("");
@@ -27,7 +26,6 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
   const [fieldErrors, setFieldErrors] = useState<{
     fullName?: string;
     mobile?: string;
-    passwordMatch?: string;
   }>({});
 
   // Helper: handle auth result & show toasts and user feedback
@@ -72,9 +70,8 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
     setErrorText(null);
     setFieldErrors({});
 
-    // Validate fullName and mobile in signup mode
     if (mode === "signup") {
-      let errors: { fullName?: string; mobile?: string; passwordMatch?: string } = {};
+      let errors: { fullName?: string; mobile?: string } = {};
 
       if (!fullName.trim()) {
         errors.fullName = "Full name is required.";
@@ -88,8 +85,8 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
       if (!/^[6-9]\d{9}$/.test(mobile.trim())) {
         errors.mobile = "Please enter a valid 10-digit mobile number.";
       }
-      if (password !== confirmPassword) {
-        errors.passwordMatch = "Passwords do not match.";
+      if (!password || password.length < 6) {
+        errors.fullName = errors.fullName ?? ""; // Just to trigger error display if password is too short
       }
       if (Object.keys(errors).length > 0) {
         setFieldErrors(errors);
@@ -100,7 +97,6 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
     setLoading(true);
     try {
       if (mode === "signup") {
-        // Use Supabase's built-in email verification (emailRedirectTo REQUIRED)
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -143,7 +139,6 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
   React.useEffect(() => {
     setMessage("");
     setPassword("");
-    setConfirmPassword("");
     setErrorText(null);
     setFieldErrors({});
     if (mode === "signup") {
@@ -177,22 +172,18 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
               </div>
             )}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {
-                mode === "signup" && (
-                  <SignupExtraFields
-                    fullName={fullName}
-                    setFullName={setFullName}
-                    mobile={mobile}
-                    setMobile={setMobile}
-                    loading={loading}
-                    password={password}
-                    setPassword={setPassword}
-                    confirmPassword={confirmPassword}
-                    setConfirmPassword={setConfirmPassword}
-                    errors={fieldErrors}
-                  />
-                )
-              }
+              {mode === "signup" && (
+                <SignupExtraFields
+                  fullName={fullName}
+                  setFullName={setFullName}
+                  mobile={mobile}
+                  setMobile={setMobile}
+                  loading={loading}
+                  password={password}
+                  setPassword={setPassword}
+                  errors={fieldErrors}
+                />
+              )}
               {mode !== "signup" && (
                 <>
                   <EmailInput email={email} setEmail={setEmail} loading={loading} />
@@ -211,7 +202,13 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
                   loading ||
                   !email ||
                   (mode === "login" && !password) ||
-                  (mode === "signup" && (!fullName || !mobile || !password || !confirmPassword))
+                  (mode === "signup" &&
+                    (!fullName ||
+                      !/^[A-Z ]{2,}$/.test(fullName) ||
+                      !mobile ||
+                      !/^[6-9]\d{9}$/.test(mobile) ||
+                      !password ||
+                      password.length < 6))
                 }
               >
                 {loading && <Loader2 className="animate-spin mr-2" />}
