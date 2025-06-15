@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -112,17 +113,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const sendOtp = async (mobile: string) => {
     setLoading(true);
     try {
-      // Send OTP natively with Supabase
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: mobile.startsWith('+') ? mobile : `+91${mobile}`,
-      });
+      // Use Twilio-powered edge function instead of Supabase auth
+      const response = await fetch(
+        `${SUPABASE_FUNCTIONS_BASE}/send-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ mobile })
+        }
+      );
+      const data = await response.json();
       setLoading(false);
-      if (error) {
-        console.error("OTP send failed:", error.message);
-        return { error: "Failed to send OTP. Please try again." };
+      if (!response.ok) {
+        console.error("OTP send failed:", data.error);
+        return { error: data.error || "Failed to send OTP. Please try again." };
       }
       return { error: null };
-    } catch (error) {
+    } catch (error: any) {
       setLoading(false);
       console.error("OTP send failed:", error);
       return { error: "Failed to send OTP. Please try again." };
