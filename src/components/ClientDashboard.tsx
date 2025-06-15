@@ -91,7 +91,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   
   // Remove legacy lockSeat, releaseSeatLock. Only useSeats and refetch.
   const { seats, loading: seatsLoading, refetch: refetchSeats } = useSeats();
-  const { bookings, createBooking, refetch: refetchBookings } = useBookings();
+  const { bookings, refetch: refetchBookings } = useBookings();
   
   const [waitlistPosition] = useState(0);
   const [hasPendingSeatChange, setHasPendingSeatChange] = useState(false);
@@ -142,11 +142,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [bookingFormDuration, setBookingFormDuration] = useState('');
   const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
 
-  // Only allow booking if the user has NO pending/approved booking
+  // Only allow booking if the user has NO booking (pending/approved/cancelled) since status property is gone
   const hasActiveBooking = bookings.some(
     b =>
-      b.user_id === user?.id &&
-      (b.status === 'pending' || b.status === 'approved')
+      b.user_id === user?.id
   );
 
   // Modern seat select handler for SeatSelection 
