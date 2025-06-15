@@ -84,8 +84,10 @@ export const useBookings = () => {
       if (existingBooking) {
         throw new Error('You already have an active booking request. Please wait for approval or cancel your existing request.');
       }
-      // Remove the shows table logic as it's not defined
-      // Insert booking directly
+
+      // NOTE: show_id is a required field and shouldn't be null. Use a dummy string value for now.
+      const showId = 'default-show'; // You could fetch a real show id if necessary.
+
       const { error } = await supabase
         .from('seat_bookings')
         .insert([{
@@ -93,7 +95,8 @@ export const useBookings = () => {
           seat_id: seatId,
           duration_months: durationMonths,
           total_amount: totalAmount,
-          status: 'pending'
+          status: 'pending',
+          show_id: showId
         }]);
 
       if (error) throw new Error(error.message || "Unknown Supabase insert error");

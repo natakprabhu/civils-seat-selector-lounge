@@ -395,16 +395,26 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
       // Map to transaction format
       const formattedBookings =
-        (bookings || []).map(b => ({
-          id: b.id,
-          type: 'New Booking' as const,
-          seatNumber: b.seat?.seat_number,
-          section: b.seat?.section,
-          duration: b.duration_months,
-          totalAmount: b.total_amount,
-          status: b.status,
-          requestedAt: b.requested_at,
-        }));
+        (bookings || []).map(b => {
+          // Type guard for SelectQueryError which does NOT have seat_number etc
+          const seat =
+            b.seat &&
+            typeof b.seat === "object" &&
+            "seat_number" in b.seat &&
+            "section" in b.seat
+              ? (b.seat as { seat_number?: string; section?: string })
+              : {};
+          return {
+            id: b.id,
+            type: 'New Booking' as const,
+            seatNumber: seat.seat_number,
+            section: seat.section,
+            duration: b.duration_months,
+            totalAmount: b.total_amount,
+            status: b.status,
+            requestedAt: b.requested_at,
+          };
+        });
 
       // Fetch seat change requests for user
       const { data: changes } = await supabase
