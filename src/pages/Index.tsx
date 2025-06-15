@@ -2,14 +2,15 @@
 import { useAuth } from "@/hooks/useAuth";
 import AuthPage from "@/components/AuthPage";
 import ClientDashboard from "@/components/ClientDashboard";
-import AdminDashboard from "@/components/AdminDashboard";
-import StaffDashboard from "@/components/StaffDashboard";
+
+// Removed AdminDashboard and StaffDashboard for now, as roles aren't provided
+// import AdminDashboard from "@/components/AdminDashboard";
+// import StaffDashboard from "@/components/StaffDashboard";
 
 const Index = () => {
-  const { user, userRole, loading, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
 
-  // Debug logs for state
-  console.log("INDEX_PAGE_STATE:", { user, userRole, loading });
+  console.log("INDEX_PAGE_STATE:", { user, loading });
 
   if (loading) {
     return (
@@ -27,21 +28,13 @@ const Index = () => {
     await signOut();
   };
 
-  // Route based on user role
-  switch (userRole) {
-    case 'admin':
-      return <AdminDashboard onLogout={handleLogout} />;
-    case 'staff':
-      return <StaffDashboard onLogout={handleLogout} />;
-    case 'client':
-    default:
-      return (
-        <ClientDashboard 
-          userMobile={user.phone || user.user_metadata?.mobile || ''} 
-          onLogout={handleLogout} 
-        />
-      );
-  }
+  // Since role info is not set in AuthContext, always render ClientDashboard
+  return (
+    <ClientDashboard 
+      userMobile={user.mobile || ''} 
+      onLogout={handleLogout} 
+    />
+  );
 };
 
 export default Index;
