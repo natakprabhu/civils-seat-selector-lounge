@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +33,7 @@ const DUMMY_BOOKING = {
   mobile: '9876543210',
   email: 'user@email.com',
   duration: '1 Month',
-  status: 'not_applied', // Fixed: proper literal type
+  status: 'not_applied',
   submittedAt: '',
   paymentStatus: 'pending',
   paidAmount: 0,
@@ -44,7 +43,7 @@ const DUMMY_BOOKING = {
   planDetails: '',
   fromTime: '9:00 AM',
   toTime: '9:00 PM'
-};
+} as const;
 
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const { user } = useAuth();
@@ -450,4 +449,3 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 };
 
 export default ClientDashboard;
-
