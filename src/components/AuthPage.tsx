@@ -81,58 +81,60 @@ const AuthPage: React.FC = () => {
             <p className="text-slate-400 text-lg mt-2">UPSC Library Management</p>
           </CardHeader>
           <CardContent className="space-y-6 px-8 pb-8">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Mobile Number</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input
-                  type="tel"
-                  placeholder="Enter 10-digit Mobile Number"
-                  value={mobile}
-                  onChange={handleMobileChange}
-                  className="pl-10 h-12 text-lg bg-slate-800 border-slate-600 text-white focus:border-cyan-500 focus:ring-cyan-500"
-                  disabled={showOtpInput}
-                  maxLength={10}
-                />
-              </div>
-              {mobile && !validateMobileNumber(mobile) && (
-                <p className="text-sm text-red-400">Please enter a valid 10-digit mobile number</p>
-              )}
-            </div>
-            
-            {showOtpInput && (
+            <form onSubmit={e => e.preventDefault()} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300">Enter OTP</label>
-                <div className="flex justify-center">
-                  <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
-                      <InputOTPSlot index={1} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
-                      <InputOTPSlot index={2} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
-                      <InputOTPSlot index={3} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
-                      <InputOTPSlot index={4} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
-                      <InputOTPSlot index={5} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
-                    </InputOTPGroup>
-                  </InputOTP>
+                <label className="text-sm font-medium text-slate-300">Mobile Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <Input
+                    type="tel"
+                    placeholder="Enter 10-digit Mobile Number"
+                    value={mobile}
+                    onChange={handleMobileChange}
+                    className="pl-10 h-12 text-lg bg-slate-800 border-slate-600 text-white focus:border-cyan-500 focus:ring-cyan-500"
+                    disabled={showOtpInput}
+                    maxLength={10}
+                  />
                 </div>
+                {mobile && !validateMobileNumber(mobile) && (
+                  <p className="text-sm text-red-400">Please enter a valid 10-digit mobile number</p>
+                )}
               </div>
-            )}
-            
-            <Button
-              type="button"
-              onClick={showOtpInput ? handleVerifyOtp : handleSendOtp}
-              className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white text-lg font-semibold shadow-lg border border-slate-600"
-              disabled={loading || !mobile || !validateMobileNumber(mobile) || (showOtpInput && (otp.length !== 4 && otp.length !== 6))}
-            >
-              <Phone className="w-5 h-5 mr-2" />
-              {loading ? 'Processing...' : showOtpInput ? 'Verify OTP' : 'Send OTP'}
-            </Button>
-            
-            {showOtpInput && (
-              <p className="text-sm text-slate-400 text-center">
-                OTP sent to {mobile}. Enter the code you received.
-              </p>
-            )}
+              
+              {showOtpInput && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-300">Enter OTP</label>
+                  <div className="flex justify-center">
+                    <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
+                        <InputOTPSlot index={1} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
+                        <InputOTPSlot index={2} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
+                        <InputOTPSlot index={3} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
+                        <InputOTPSlot index={4} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
+                        <InputOTPSlot index={5} className="w-12 h-12 text-lg bg-slate-800 border-slate-600 text-white font-bold" />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                </div>
+              )}
+              
+              <Button
+                type="button"
+                onClick={showOtpInput ? handleVerifyOtp : handleSendOtp}
+                className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white text-lg font-semibold shadow-lg border border-slate-600"
+                disabled={loading || !mobile || !validateMobileNumber(mobile) || (showOtpInput && (otp.length !== 4 && otp.length !== 6))}
+              >
+                <Phone className="w-5 h-5 mr-2" />
+                {loading ? 'Processing...' : showOtpInput ? 'Verify OTP' : 'Send OTP'}
+              </Button>
+              
+              {showOtpInput && (
+                <p className="text-sm text-slate-400 text-center">
+                  OTP sent to {mobile}. Enter the code you received.
+                </p>
+              )}
+            </form>
           </CardContent>
         </Card>
       </div>
