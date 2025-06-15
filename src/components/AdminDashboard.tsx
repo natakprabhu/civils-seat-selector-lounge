@@ -263,38 +263,19 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                       </div>
                       <div>
                         <p className="text-sm text-slate-400">Actions</p>
-                        {request.status === 'pending' && (
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700"
-                              onClick={() => handleApproveRequest(request.id)}
-                            >
-                              <Check className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleRejectRequest(request.id)}
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        )}
-                        {request.status !== 'pending' && (
-                          <p className="text-sm text-slate-500">
-                            {request.status === 'approved' ? 'Approved' : 'Rejected'}
-                          </p>
-                        )}
-                      </div>
+                      {request.status !== 'pending' && (
+                        <p className="text-sm text-slate-500">
+                          {request.status === 'approved' ? 'Approved' : 'Rejected'}
+                        </p>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

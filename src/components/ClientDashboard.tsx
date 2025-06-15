@@ -34,7 +34,7 @@ const DUMMY_BOOKING = {
   mobile: '9876543210',
   email: 'user@email.com',
   duration: '1 Month',
-  status: 'not_applied',
+  status: 'not_applied', // Fixed: proper literal type
   submittedAt: '',
   paymentStatus: 'pending',
   paidAmount: 0,
