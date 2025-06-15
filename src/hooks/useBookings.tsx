@@ -102,14 +102,23 @@ export const useBookings = () => {
       if (error) throw new Error(error.message || "Unknown Supabase insert error");
       await fetchBookings();
       return { error: null };
-    } catch (error) {
+    } catch (error: any) {
+      // Always return a plain object with a readable .message
       if (typeof error === "string") {
         return { error: { message: error } };
       }
       if (error instanceof Error) {
-        return { error };
+        return { error: { message: error.message } };
       }
-      return { error: { message: JSON.stringify(error) } };
+      try {
+        // Try to safely inspect error
+        if (error && typeof error === "object" && "message" in error && typeof (error as any).message === "string") {
+          return { error: { message: (error as any).message } };
+        }
+        return { error: { message: JSON.stringify(error) || "Unknown error occurred" } };
+      } catch {
+        return { error: { message: "Unknown error occurred" } };
+      }
     }
   };
 
@@ -142,9 +151,14 @@ export const useBookings = () => {
 
       await fetchBookings();
       return { error: null };
-    } catch (error) {
-      console.error('Error approving booking:', error);
-      return { error: error instanceof Error ? error : new Error(String(error)) };
+    } catch (error: any) {
+      const message = error?.message
+        ? error.message
+        : typeof error === "string"
+            ? error
+            : JSON.stringify(error) || "Unknown error while approving booking";
+      console.error('Error approving booking:', message);
+      return { error: { message } };
     }
   };
 
@@ -170,9 +184,14 @@ export const useBookings = () => {
 
       await fetchBookings();
       return { error: null };
-    } catch (error) {
-      console.error('Error rejecting booking:', error);
-      return { error: error instanceof Error ? error : new Error(String(error)) };
+    } catch (error: any) {
+      const message = error?.message
+        ? error.message
+        : typeof error === "string"
+            ? error
+            : JSON.stringify(error) || "Unknown error while rejecting booking";
+      console.error('Error rejecting booking:', message);
+      return { error: { message } };
     }
   };
 

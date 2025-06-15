@@ -9,51 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      booking_status_history: {
-        Row: {
-          booking_id: string | null
-          changed_at: string | null
-          changed_by: string | null
-          id: string
-          new_status: string | null
-          notes: string | null
-          old_status: string | null
-        }
-        Insert: {
-          booking_id?: string | null
-          changed_at?: string | null
-          changed_by?: string | null
-          id?: string
-          new_status?: string | null
-          notes?: string | null
-          old_status?: string | null
-        }
-        Update: {
-          booking_id?: string | null
-          changed_at?: string | null
-          changed_by?: string | null
-          id?: string
-          new_status?: string | null
-          notes?: string | null
-          old_status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "booking_status_history_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "seat_bookings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "booking_status_history_changed_by_fkey"
-            columns: ["changed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       library_settings: {
         Row: {
           description: string | null
@@ -180,70 +135,30 @@ export type Database = {
       }
       seat_bookings: {
         Row: {
-          approved_at: string | null
-          approved_by: string | null
-          duration_months: number
-          end_date: string | null
+          booked_at: string
           id: string
-          notes: string | null
-          requested_at: string | null
-          seat_id: string | null
-          start_date: string | null
-          status: Database["public"]["Enums"]["booking_status"] | null
-          total_amount: number
+          payment_reference: string | null
+          seat_id: string
+          show_id: string
           user_id: string
         }
         Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
-          duration_months: number
-          end_date?: string | null
+          booked_at?: string
           id?: string
-          notes?: string | null
-          requested_at?: string | null
-          seat_id?: string | null
-          start_date?: string | null
-          status?: Database["public"]["Enums"]["booking_status"] | null
-          total_amount: number
+          payment_reference?: string | null
+          seat_id: string
+          show_id: string
           user_id: string
         }
         Update: {
-          approved_at?: string | null
-          approved_by?: string | null
-          duration_months?: number
-          end_date?: string | null
+          booked_at?: string
           id?: string
-          notes?: string | null
-          requested_at?: string | null
-          seat_id?: string | null
-          start_date?: string | null
-          status?: Database["public"]["Enums"]["booking_status"] | null
-          total_amount?: number
+          payment_reference?: string | null
+          seat_id?: string
+          show_id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "seat_bookings_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "seat_bookings_seat_id_fkey"
-            columns: ["seat_id"]
-            isOneToOne: false
-            referencedRelation: "seats"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "seat_bookings_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       seat_change_requests: {
         Row: {
@@ -284,13 +199,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "seat_change_requests_current_booking_id_fkey"
-            columns: ["current_booking_id"]
-            isOneToOne: false
-            referencedRelation: "seat_bookings"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "seat_change_requests_new_seat_id_fkey"
             columns: ["new_seat_id"]
             isOneToOne: false
@@ -312,6 +220,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      seat_holds: {
+        Row: {
+          expires_at: string
+          held_at: string
+          id: string
+          seat_id: string
+          show_id: string
+          user_id: string
+        }
+        Insert: {
+          expires_at: string
+          held_at?: string
+          id?: string
+          seat_id: string
+          show_id: string
+          user_id: string
+        }
+        Update: {
+          expires_at?: string
+          held_at?: string
+          id?: string
+          seat_id?: string
+          show_id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       seat_images: {
         Row: {
@@ -352,45 +287,6 @@ export type Database = {
           },
         ]
       }
-      seat_locks: {
-        Row: {
-          created_at: string | null
-          expires_at: string
-          id: string
-          seat_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          expires_at: string
-          id?: string
-          seat_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          expires_at?: string
-          id?: string
-          seat_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "seat_locks_seat_id_fkey"
-            columns: ["seat_id"]
-            isOneToOne: true
-            referencedRelation: "seats"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "seat_locks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       seats: {
         Row: {
           created_at: string | null
@@ -399,8 +295,6 @@ export type Database = {
           row_number: string
           seat_number: string
           section: string
-          status: Database["public"]["Enums"]["seat_status"] | null
-          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
@@ -409,8 +303,6 @@ export type Database = {
           row_number: string
           seat_number: string
           section: string
-          status?: Database["public"]["Enums"]["seat_status"] | null
-          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
@@ -419,8 +311,6 @@ export type Database = {
           row_number?: string
           seat_number?: string
           section?: string
-          status?: Database["public"]["Enums"]["seat_status"] | null
-          updated_at?: string | null
         }
         Relationships: []
       }
@@ -474,13 +364,6 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "transactions_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "seat_bookings"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "transactions_change_request_id_fkey"
             columns: ["change_request_id"]
