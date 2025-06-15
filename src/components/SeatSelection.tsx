@@ -48,12 +48,11 @@ const getSeatStatus = (
   const booking = bookingsMap[seatNumber];
   if (!booking) return "vacant";
   
-  // Show as pending (yellow) if status is pending
-  if (booking.status === "pending") return "pending";
-  // Show as booked (red) if status is approved
-  if (booking.status === "approved") return "booked";
+  // Show seat status based on booking status from seat_bookings table
+  if (booking.status === "pending") return "pending"; // Yellow (on hold)
+  if (booking.status === "approved") return "booked"; // Red (booked)
   
-  return "vacant";
+  return "vacant"; // Green (available)
 };
 
 const getSeatByNumber = (seats: Seat[]) => {
@@ -108,6 +107,8 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   currentUserId
 }) => {
   const seatsByNumber = useMemo(() => getSeatByNumber(seats), [seats]);
+  
+  // Create bookings map based on seat_bookings table status
   const bookingsMap: SeatMap = useMemo(() => {
     const map: SeatMap = {};
     bookings.forEach(b => {
@@ -124,7 +125,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   }, [bookings, seats]);
 
   const handleSeatClick = (seatNumber: string) => {
-    // Only allow seat selection if user doesn't have an active booking
+    // Prevent any booking if user has ANY pending booking in seat_bookings table
     if (!userActiveBooking) {
       onSeatSelect(seatNumber);
     }

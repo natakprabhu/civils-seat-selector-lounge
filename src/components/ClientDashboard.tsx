@@ -127,6 +127,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           })
         );
         setBookings(filtered);
+        console.log("[Fetch Bookings] All bookings:", filtered);
       } else {
         setBookings([]);
       }
@@ -137,20 +138,24 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     fetchBookings();
   }, [user]);
 
-  // Check if user has any active booking (pending or approved)
+  // Check if user has ANY active booking (pending or approved) in seat_bookings table
   const userActiveBooking = bookings.some(
     (b) => (b.user_id === userId) && (b.status === "pending" || b.status === "approved")
   );
 
+  console.log("[User Active Booking Check] userId:", userId);
+  console.log("[User Active Booking Check] userActiveBooking:", userActiveBooking);
+  console.log("[User Active Booking Check] User's bookings:", bookings.filter(b => b.user_id === userId));
+
   const handleSeatSelect = (seat: string) => {
-    // Only allow seat selection if user doesn't have an active booking
+    // Only allow seat selection if user doesn't have ANY active booking
     if (!userActiveBooking) {
       setSelectedSeat(seat);
       setShowDialog(true);
     } else {
       toast({
         title: 'Booking Restriction',
-        description: 'You already have an active booking. Please wait for it to be processed or contact admin.',
+        description: 'You already have an active booking in seat_bookings table. Please wait for it to be processed or contact admin.',
         variant: 'destructive'
       });
     }
@@ -213,7 +218,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       setSelectedSeat(null);
       toast({
         title: 'Booking Requested',
-        description: 'Your booking has been logged and is now pending approval. The seat will appear as pending (yellow) on the map.',
+        description: 'Your booking has been logged and is now pending approval. The seat will appear as pending (yellow) on the map and you cannot make another booking until this is processed by admin.',
         variant: 'default'
       });
     } else {
@@ -416,7 +421,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                 <AlertCircle className="w-5 h-5 text-orange-400" />
                 <div>
                   <p className="font-semibold text-white">Booking Restriction</p>
-                  <p className="text-sm text-slate-400">You have an active booking request. You cannot make another booking until this one is processed.</p>
+                  <p className="text-sm text-slate-400">You have an active booking in seat_bookings table. You cannot make another booking until this one is processed by admin.</p>
                 </div>
               </div>
             </CardContent>
@@ -459,6 +464,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             </CardContent>
           </Card>
         </div>
+
         {/* Section 2: Status Cards */}
         <div className="grid md:grid-cols-4 gap-4">
           <Card className="dashboard-card h-40">
