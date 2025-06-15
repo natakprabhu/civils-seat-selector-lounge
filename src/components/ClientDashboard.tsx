@@ -37,7 +37,6 @@ import {
   ArrowRight,
   Bell
 } from 'lucide-react';
-import { ToastAction } from '@/components/ui/toast';
 
 interface ClientDashboardProps {
   userMobile: string;
@@ -71,8 +70,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   
   // Use real Supabase data
-  const { seats, loading: seatsLoading, lockSeat } = useSeats();
-  const { createBooking, bookings, rejectBooking, refetch: refetchBookings } = useBookings(); // get rejectBooking
+  const { seats, loading: seatsLoading } = useSeats();
+  const { createBooking } = useBookings();
   
   const [waitlistPosition] = useState(0);
   const [hasPendingSeatChange, setHasPendingSeatChange] = useState(false);
@@ -103,67 +102,24 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     seatId: ''
   });
 
-  // Check if user has active/pending booking
-  const hasActiveOrPendingBooking =
-    userBooking.status === "approved" ||
-    userBooking.status === "pending";
-
   // Calculate seat statistics using real data
   const totalSeats = seats.length;
   const availableSeats = seats.filter(s => s.status === 'vacant').length;
   const onHoldSeats = seats.filter(s => s.status === 'on_hold').length;
 
-  const [selectedSeatId, setSelectedSeatId] = useState<string>('');
-  const [locking, setLocking] = useState(false);
-
-  const handleSeatClick = async (seatId: string) => {
-    if (hasActiveOrPendingBooking) {
-      toast({
-        title: "One Booking Allowed",
-        description:
-          "You already have an active or pending seat booking. Please contact admin to approve/cancel or cancel your request from 'My Booking' section.",
-        variant: "destructive",
-        action: (
-          <ToastAction altText="Go to My Booking" onClick={() => setCurrentView("my-booking")}>
-            Go to My Booking
-          </ToastAction>
-        ),
+  const handleSeatClick = (seatId: string) => {
+    console.log('Seat clicked:', seatId);
+    const seat = seats.find(s => s.id === seatId);
+    if (seat && seat.status === 'vacant') {
+      setSelectedSeat(seat.seat_number);
+      setBookingFormData({
+        ...bookingFormData,
+        seatId: seat.id
       });
-      return;
+      setShowBookingModal(true);
+    } else {
+      console.log('Seat not available or not found:', seat);
     }
-
-    const seat = seats.find((s) => s.id === seatId);
-    if (!seat || seat.status !== "vacant") {
-      toast({
-        title: "Seat Unavailable",
-        description: "This seat is not available for booking.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLocking(true);
-    const { error } = await lockSeat(seatId);
-    setLocking(false);
-
-    if (error) {
-      toast({
-        title: "Error Locking Seat",
-        description: error.message || "Failed to place a lock. Try another seat.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSelectedSeatId(seatId);
-    setBookingFormData({
-      ...bookingFormData,
-      seatId: seatId,
-    });
-  };
-
-  const handleConfirmSeat = () => {
-    setShowBookingModal(true);
   };
 
   const handleBookingSubmit = async () => {
@@ -232,81 +188,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     setCurrentView('dashboard');
   };
 
-  // Helper to sync userBooking with current Supabase bookings (simplified: reset status if not found)
-  const reloadBookingStatus = async () => {
-    await refetchBookings();
-    // Find the user's latest booking (pending or approved)
-    const myBooking = bookings.find(
-      (b) => ['pending', 'approved'].includes(b.status)
-    );
-    if (!myBooking) {
-      // No active or pending booking: reset UI with allowed types
-      setUserBooking((prev) => ({
-        ...prev,
-        status: 'not_applied',
-        seatNumber: '',
-        planDetails: '',
-        submittedAt: '',
-        validTill: '',
-        remainingDays: 0,
-        startDate: '',
-        paidAmount: 0,
-        paymentStatus: 'pending',
-        paidOn: undefined,
-        paymentMethod: undefined,
-      }));
-    } else {
-      // Map booking data to our state model, avoid unknown status
-      setUserBooking((prev) => ({
-        ...prev,
-        seatNumber: myBooking.seat?.seat_number || '',
-        name: myBooking.profile?.full_name || prev.name,
-        email: myBooking.profile?.email || prev.email,
-        mobile: myBooking.profile?.mobile || prev.mobile,
-        duration: myBooking.duration_months ? `${myBooking.duration_months}` : '',
-        status:
-          myBooking.status === 'pending'
-            ? 'pending'
-            : myBooking.status === 'approved'
-            ? 'approved'
-            : 'not_applied',
-        submittedAt: myBooking.requested_at,
-        paymentStatus: 'pending', // Not tracked here
-        paidAmount: undefined,
-        paidOn: undefined,
-        paymentMethod: undefined,
-        validTill: '',    // No end_date available on BookingRequest
-        remainingDays: undefined,
-        startDate: '',    // No start_date available on BookingRequest
-        planDetails: myBooking.duration_months
-          ? `${myBooking.duration_months} Month${myBooking.duration_months > 1 ? 's' : ''}`
-          : '',
-      }));
-    }
-  };
-
-  // Cancel active/pending request handler
-  const handleCancelRequest = async () => {
-    try {
-      // Find only the pending booking (waiting for approval)
-      const myBooking = bookings.find((b) => b.status === 'pending');
-      if (!myBooking) return;
-      const { error } = await rejectBooking(myBooking.id);
-      if (error) throw error;
-      toast({
-        title: "Booking Cancelled",
-        description: "Your seat booking request has been cancelled.",
-      });
-      await reloadBookingStatus();
-    } catch (error: any) {
-      toast({
-        title: "Error Cancelling Request",
-        description: error.message || "Could not cancel request. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
   // Render different views
   if (currentView === 'seat-change') {
     return (
@@ -363,7 +244,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         userBooking={userBooking}
         onBack={() => setCurrentView('dashboard')}
         onViewTransactions={() => setCurrentView('all-transactions')}
-        onCancelRequest={handleCancelRequest}
       />
     );
   }
@@ -662,38 +542,12 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             <CardTitle className="text-xl font-bold text-white">Live Seat Map</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-6 items-start">
-              <div className="flex-1">
-                <SeatSelection 
-                  seats={seats}
-                  selectedSeat={selectedSeatId}
-                  onSeatSelect={handleSeatClick}
-                  showConfirmButton={false}  // Do not show the button inside SeatSelection
-                  onConfirmSelection={handleConfirmSeat}
-                  locking={locking}
-                />
-                {/* Confirm Seat button always appears just below the seat layout */}
-                {selectedSeatId && (
-                  <div className="rounded-xl bg-slate-800/80 p-6 border border-slate-700/60 shadow-2xl flex flex-col items-center mt-6 w-full max-w-lg mx-auto">
-                    <h3 className="text-lg font-bold text-white mb-2">Confirm Your Seat</h3>
-                    <div className="text-slate-300 mb-4">
-                      You have selected <span className="font-semibold text-cyan-300">Seat {seats.find(s => s.id === selectedSeatId)?.seat_number}</span>.
-                    </div>
-                    <Button 
-                      className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold"
-                      onClick={handleConfirmSeat}
-                      disabled={locking}
-                    >
-                      {locking ? "Locking Seat..." : "Confirm Seat"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-              {/* Remove the confirm seat sidebar/column for desktop */}
-              {/* <div className="w-full md:w-1/3 mt-4 md:mt-0 flex flex-col items-center">
-                ...
-              </div> */}
-            </div>
+            <SeatSelection 
+              seats={seats}
+              selectedSeat={selectedSeat ? seats.find(s => s.seat_number === selectedSeat)?.id || null : null}
+              onSeatSelect={handleSeatClick}
+              onConfirmSelection={() => {}}
+            />
           </CardContent>
         </Card>
       </div>
@@ -706,9 +560,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </DialogHeader>
           <div className="space-y-4">
             <div className="w-full h-32 bg-gradient-to-br from-slate-800 to-slate-700 rounded-lg flex items-center justify-center border border-slate-600">
-              <p className="text-slate-300 font-medium">Seat {
-                seats.find(s => s.id === selectedSeatId)?.seat_number || ""
-              } Image</p>
+              <p className="text-slate-300 font-medium">Seat {selectedSeat} Image</p>
             </div>
             
             <div>
@@ -748,7 +600,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             <div>
               <label className="text-sm font-medium text-slate-300">Selected Seat</label>
               <Input
-                value={`Seat ${seats.find(s => s.id === selectedSeatId)?.seat_number || ''}`}
+                value={`Seat ${selectedSeat}`}
                 readOnly
                 className="bg-slate-700 border-slate-600 text-white"
               />

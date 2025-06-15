@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { CheckCircle, AlertCircle } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
 
 interface BookingFormProps {
   selectedSeat: string;
@@ -13,25 +13,12 @@ interface BookingFormProps {
 }
 
 const BookingForm: React.FC<BookingFormProps> = ({ selectedSeat, onSubmitBooking }) => {
-  const { userProfile } = useAuth();
-
   const [formData, setFormData] = useState({
-    name: userProfile?.full_name || '',
-    mobile: userProfile?.mobile || '',
-    email: userProfile?.email || '',
+    name: '',
+    mobile: '',
+    email: '',
     duration: ''
   });
-
-  // If userProfile changes, update state.
-  React.useEffect(() => {
-    setFormData({
-      name: userProfile?.full_name || '',
-      mobile: userProfile?.mobile || '',
-      email: userProfile?.email || '',
-      duration: ''
-    });
-    // eslint-disable-next-line
-  }, [userProfile, selectedSeat]);
 
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,36 +96,58 @@ const BookingForm: React.FC<BookingFormProps> = ({ selectedSeat, onSubmitBooking
               <label className="text-sm font-medium text-slate-700">Full Name *</label>
               <Input
                 type="text"
+                placeholder="Enter your full name"
                 value={formData.name}
-                readOnly
-                disabled
-                className="h-11 opacity-70 bg-slate-100"
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className={`h-11 ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'}`}
               />
+              {errors.name && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.name}
+                </p>
+              )}
             </div>
+            
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Mobile Number *</label>
               <Input
                 type="tel"
+                placeholder="Enter 10-digit mobile number"
                 value={formData.mobile}
-                readOnly
-                disabled
-                className="h-11 opacity-70 bg-slate-100"
+                onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                className={`h-11 ${errors.mobile ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'}`}
+                maxLength={10}
               />
+              {errors.mobile && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.mobile}
+                </p>
+              )}
             </div>
+            
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Email Address *</label>
               <Input
                 type="email"
+                placeholder="Enter your email address"
                 value={formData.email}
-                readOnly
-                disabled
-                className="h-11 opacity-70 bg-slate-100"
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className={`h-11 ${errors.email ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'}`}
               />
+              {errors.email && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.email}
+                </p>
+              )}
             </div>
+            
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-700">Duration *</label>
               <Select value={formData.duration} onValueChange={(value) => setFormData({ ...formData, duration: value })}>
-                <SelectTrigger className={`h-11`}>
+                <SelectTrigger className={`h-11 ${errors.duration ? 'border-red-500 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'}`}>
                   <SelectValue placeholder="Select subscription duration" />
                 </SelectTrigger>
                 <SelectContent>
@@ -156,6 +165,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ selectedSeat, onSubmitBooking
                 </p>
               )}
             </div>
+            
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
@@ -166,6 +176,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ selectedSeat, onSubmitBooking
                 </div>
               </div>
             </div>
+            
             <Button
               type="submit"
               className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-semibold shadow-lg"

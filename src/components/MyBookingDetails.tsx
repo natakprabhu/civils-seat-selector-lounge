@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, MapPin, Calendar, IndianRupee, Clock, Receipt, X } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, IndianRupee, Clock, Receipt } from 'lucide-react';
 
 interface BookingData {
   seatNumber: string;
@@ -26,24 +27,13 @@ interface MyBookingDetailsProps {
   userBooking: BookingData;
   onBack: () => void;
   onViewTransactions: () => void;
-  onCancelRequest?: () => Promise<void>; // NEW prop for cancelling booking
 }
 
 const MyBookingDetails: React.FC<MyBookingDetailsProps> = ({ 
   userBooking, 
   onBack, 
-  onViewTransactions,
-  onCancelRequest
+  onViewTransactions 
 }) => {
-  const [cancelling, setCancelling] = useState(false);
-
-  const handleCancel = async () => {
-    if (!onCancelRequest) return;
-    setCancelling(true);
-    await onCancelRequest();
-    setCancelling(false);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
       <div className="max-w-4xl mx-auto px-6 py-8">
@@ -191,17 +181,6 @@ const MyBookingDetails: React.FC<MyBookingDetailsProps> = ({
               <Receipt className="w-4 h-4 mr-2" />
               View All Transactions
             </Button>
-            {/* Show Cancel Request ONLY if status is 'pending' (not for 'approved') */}
-            {userBooking.status === 'pending' && onCancelRequest && (
-              <Button
-                onClick={handleCancel}
-                disabled={cancelling}
-                className="bg-gradient-to-b from-red-700 to-pink-900 hover:from-red-800 hover:to-pink-800 text-white border border-red-500 flex items-center"
-              >
-                <X className="w-4 h-4 mr-2" />
-                {cancelling ? 'Cancelling...' : 'Cancel Request'}
-              </Button>
-            )}
           </div>
         </div>
       </div>

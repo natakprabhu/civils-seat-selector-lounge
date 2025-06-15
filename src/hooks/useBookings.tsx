@@ -1,6 +1,6 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from "@/hooks/useAuth";
 
 export interface BookingRequest {
   id: string;
@@ -27,8 +27,6 @@ export interface BookingRequest {
 export const useBookings = () => {
   const [bookings, setBookings] = useState<BookingRequest[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const { user, userProfile } = useAuth();
 
   const fetchBookings = async () => {
     try {
@@ -76,16 +74,8 @@ export const useBookings = () => {
 
   const createBooking = async (seatId: string, durationMonths: number, totalAmount: number) => {
     try {
-      // Prefer Supabase user
-      const { data: { user: supaUser } } = await supabase.auth.getUser();
-      let userId = supaUser?.id;
-
-      if (!userId && user && userProfile && userProfile.mobile) {
-        // Allow booking with just a mobile fallback (dangerous, but if admin accepts, that's fine for demo/test use)
-        throw new Error("Still not authenticated with Supabase; please log out & in, and admin can create missing profile if issue persists.");
-      }
-
-      if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
         throw new Error("User not authenticated. Please log in to book a seat.");
       }
 
@@ -93,7 +83,7 @@ export const useBookings = () => {
       const { data: existingBooking } = await supabase
         .from('seat_bookings')
         .select('id')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .in('status', ['pending', 'approved'])
         .single();
 
@@ -108,7 +98,7 @@ export const useBookings = () => {
           seat_id: seatId,
           duration_months: durationMonths,
           total_amount: totalAmount,
-          user_id: userId,
+          user_id: user.id,
           status: 'pending'
         });
 

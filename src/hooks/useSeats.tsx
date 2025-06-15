@@ -1,6 +1,6 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from "@/hooks/useAuth";
 
 export interface Seat {
   id: string;
@@ -14,7 +14,6 @@ export interface Seat {
 export const useSeats = () => {
   const [seats, setSeats] = useState<Seat[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, userProfile } = useAuth();
 
   const fetchSeats = async () => {
     try {
@@ -59,53 +58,25 @@ export const useSeats = () => {
     };
   }, []);
 
-  // Helper to get current user id and ensure it's defined
-  const getUserId = async () => {
-    // Try Supabase session first
-    const { data, error } = await supabase.auth.getUser();
-    if (!error && data && data.user && data.user.id) {
-      return data.user.id;
-    }
-    // Fallback: Get from Auth context if available
-    if (user && user.mobile) {
-      // Since we do not have a UUID, return null. Could be patched to use mobile as id in nonsecure flows
-      return null;
-    }
-    return null;
-  };
-
   const lockSeat = async (seatId: string) => {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 30); // 30-minute lock
-
-    const userId = await getUserId();
-    if (!userId) {
-      // Try to proceed with basic info in very limited fallback use case
-      return { error: { message: "Still not authenticated with Supabase; please try logging out and back in." } };
-    }
 
     const { error } = await supabase
       .from('seat_locks')
       .insert({
         seat_id: seatId,
-        expires_at: expiresAt.toISOString(),
-        user_id: userId
+        expires_at: expiresAt.toISOString()
       });
 
     return { error };
   };
 
   const releaseSeatLock = async (seatId: string) => {
-    const userId = await getUserId();
-    if (!userId) {
-      return { error: { message: "Still not authenticated with Supabase; please try logging out and back in." } };
-    }
-
     const { error } = await supabase
       .from('seat_locks')
       .delete()
-      .eq('seat_id', seatId)
-      .eq('user_id', userId);
+      .eq('seat_id', seatId);
 
     return { error };
   };
