@@ -123,9 +123,22 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   }, [seats]);
 
   function getSeatStatus(seat: Seat): SeatMapState | "selected" {
+    if (!seat || !seat.id) return "available";
     if (selectedSeatId && seat.id === selectedSeatId) return "selected";
-    return seatStatuses[seat.id]?.state || "available";
+    // Patch: fallback to "available" if seatStatuses is missing this seat, never read .state of undefined.
+    return seatStatuses && seatStatuses[seat.id] && seatStatuses[seat.id].state
+      ? seatStatuses[seat.id].state
+      : "available";
   }
+
+  // Extra: Log missing seatStatuses
+  React.useEffect(() => {
+    seats.forEach(seat => {
+      if (!seatStatuses[seat.id]) {
+        console.warn(`[SeatSelection] seatStatuses missing for seat.id=${seat.id}, number=${seat.seat_number}`);
+      }
+    });
+  }, [seats, seatStatuses]);
 
   // Debug: Log booking + seat computed status mapping
   React.useEffect(() => {
@@ -161,15 +174,13 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
               })}
             </div>
           ))}
-          {/* Stairs and Washroom at bottom (below last row "F") */}
+          {/* Stairs and Washroom at bottom */}
           <div className="flex flex-row mt-2 w-full">
-            {/* Stairs */}
             <div className="flex-1 flex items-center justify-center m-1">
               <div className="w-full h-20 bg-gradient-to-t from-slate-400 to-slate-100 border rounded text-sm font-bold flex items-center justify-center shadow box-border text-black">
                 Stairs
               </div>
             </div>
-            {/* Washroom */}
             <div className="flex-1 flex items-center justify-center m-1">
               <div className="w-full h-20 bg-slate-200 border rounded text-sm font-bold flex items-center justify-center shadow box-border text-black">
                 Washroom
@@ -180,7 +191,6 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
         {/* Passage (center) */}
         <div className="relative flex flex-col mx-2">
           <div className="flex-1" />
-          {/* Center one "Passage" label vertically */}
           <div className="w-12 flex flex-col items-center justify-center flex-1" style={{ minHeight: '100%' }}>
             <span
               className="writing-vertical font-bold text-slate-400 text-base"
@@ -221,15 +231,20 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
         </div>
       </div>
 
-      {/* Show Confirm Button if available seat selected */}
-      {!bookingInProgress && selectedSeatId && seatStatuses[selectedSeatId]?.state === "available" && (
-        <button
-          className="mt-6 px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold shadow transition-colors text-base"
-          onClick={() => onSeatSelect(selectedSeatId)}
-        >
-          Confirm Booking
-        </button>
-      )}
+      {/* Patch: Confirm button guard for state */}
+      {!bookingInProgress
+        && selectedSeatId
+        && seatStatuses
+        && seatStatuses[selectedSeatId]
+        && seatStatuses[selectedSeatId].state === "available" && (
+          <button
+            className="mt-6 px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold shadow transition-colors text-base"
+            onClick={() => onSeatSelect(selectedSeatId)}
+          >
+            Confirm Booking
+          </button>
+        )
+      }
     </div>
   );
 };
