@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,22 +9,16 @@ import { Phone } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 
 interface AuthPageProps {
-  onLogin: (mobile: string, userType: 'client' | 'admin' | 'staff') => void;
+  // Not needed now; login is handled by context/auth hook
+  // onLogin: (mobile: string, userType: 'client' | 'admin' | 'staff') => void;
 }
 
-const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
+const AuthPage: React.FC<AuthPageProps> = () => {
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
-
-  // Sample credentials for testing with proper typing
-  const sampleCredentials: Array<{ mobile: string; role: 'client' | 'admin' | 'staff'; otp: string }> = [
-    { mobile: '9999999999', role: 'admin', otp: '1234' },
-    { mobile: '8888888888', role: 'staff', otp: '1234' },
-    { mobile: '7777777777', role: 'client', otp: '1234' }
-  ];
+  const { signInWithPhone, verifyOtp } = useAuth();
 
   const validateMobileNumber = (number: string) => {
     // Remove any spaces or special characters
@@ -31,7 +26,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     return cleanNumber.length === 10;
   };
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     if (!mobile) {
       toast({
         title: "Error",
@@ -51,15 +46,22 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
     }
 
     setLoading(true);
-    // Simulate OTP sending
-    setTimeout(() => {
-      setShowOtpInput(true);
-      setLoading(false);
+    const result = await signInWithPhone(mobile);
+    setLoading(false);
+    if (result.error) {
       toast({
-        title: "OTP Sent",
-        description: `OTP sent to ${mobile}. For demo, use 1234`,
+        title: "Send OTP Failed",
+        description: result.error.message || "Could not send OTP. Please try again.",
+        variant: "destructive"
       });
-    }, 1000);
+      return;
+    }
+
+    setShowOtpInput(true);
+    toast({
+      title: "OTP Sent",
+      description: `OTP sent to ${mobile}. For demo, use 1234`,
+    });
   };
 
   const handleVerifyOtp = async () => {
@@ -74,54 +76,28 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
 
     setLoading(true);
 
-    try {
-      // For this demo, OTP is always 1234.
-      if (otp !== "1234") {
-        throw new Error('Invalid OTP');
-      }
+    // For demo, Supabase test projects always accept 1234 as the OTP (if SMS is not configured)
+    const result = await verifyOtp(mobile, otp);
+    setLoading(false);
 
-      // Attempt login; if fails with invalid, register and then login
-      let loginResult = await signIn(mobile, "client");
-
-      // If error and it's invalid user, try to register
-      if (loginResult.error && 
-          loginResult.error.message &&
-          loginResult.error.message.toLowerCase().includes('invalid')) {
-        // Try register
-        // signIn will handle registration in useAuth logic, so just call again
-        loginResult = await signIn(mobile, "client");
-      }
-
-      if (loginResult.error) {
-        throw loginResult.error;
-      }
-
-      // Login or registration successful.
-      toast({
-        title: "Success",
-        description: `Welcome! You're logged in.`,
-      });
-
-      // Advise to edit profile for new users (first login)
-      setTimeout(() => {
-        toast({
-          title: "Complete your profile",
-          description: "Please add your email address and name in your profile.",
-        });
-      }, 1000);
-
-      // Call the login callback
-      onLogin(mobile, "client");
-    } catch (error: any) {
-      console.error('Login error:', error);
+    if (result.error) {
       toast({
         title: "Error",
-        description: error.message || "Login/Registration failed",
+        description: result.error.message || "Login/Verification failed",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    // Login successful
+    toast({
+      title: "Success",
+      description: `Welcome! You're logged in.`,
+    });
+
+    // OTP field clears, input disabled after auth
+    setShowOtpInput(false);
+    setOtp("");
   };
 
   const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -206,3 +182,5 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
 };
 
 export default AuthPage;
+
+// Note: After refactoring above 200 lines, consider splitting this AuthPage into smaller components for maintainability.

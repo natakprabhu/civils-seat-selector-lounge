@@ -6,7 +6,8 @@ interface AuthContextType {
   user: any | null;
   session: any | null;
   loading: boolean;
-  signIn: (mobile: string, userType: 'client' | 'admin' | 'staff') => Promise<{ error: any }>;
+  signInWithPhone: (mobile: string) => Promise<{ error: any }>;
+  verifyOtp: (mobile: string, otp: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   userRole: string | null;
 }
@@ -19,7 +20,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  // Helper to actually fetch the true user role from Supabase
+  // Helper to fetch user role from Supabase user_roles table
   const fetchUserRoleFromDb = async (userId: string) => {
     const { data, error } = await supabase
       .from('user_roles')
@@ -40,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Auth state initialization
   useEffect(() => {
     setLoading(true);
 
@@ -48,32 +50,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        // Fetch actual user role from DB
-        fetchUserRoleFromDb(session.user.id).then((role) => {
-          setUserRole(role || null);
-          // Save to localStorage for convenience, but main source of truth is DB
-          const old = localStorage.getItem('userSession');
-          let obj = { mobile: session.user.phone || '', role, loginTime: new Date().toISOString() };
-          if (old) {
-            try {
-              obj = { ...JSON.parse(old), role };
-            } catch {}
-          }
-          localStorage.setItem('userSession', JSON.stringify(obj));
-        });
+        setTimeout(() => {
+          fetchUserRoleFromDb(session.user.id).then((role) => {
+            setUserRole(role || null);
+            // Store extra in localStorage if needed
+            const old = localStorage.getItem('userSession');
+            let obj = { mobile: session.user.phone || '', role, loginTime: new Date().toISOString() };
+            if (old) {
+              try {
+                obj = { ...JSON.parse(old), role };
+              } catch { }
+            }
+            localStorage.setItem('userSession', JSON.stringify(obj));
+          });
+        }, 0);
       } else {
         setUserRole(null);
       }
       setLoading(false);
     });
 
+    // Check for existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserRoleFromDb(session.user.id).then((role) => {
           setUserRole(role || null);
-          // Save to localStorage for convenience, but main source of truth is DB
           const old = localStorage.getItem('userSession');
           let obj = { mobile: session.user.phone || '', role, loginTime: new Date().toISOString() };
           if (old) {
@@ -94,54 +97,78 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const signIn = async (mobile: string, userType: 'client' | 'admin' | 'staff') => {
+  // Send OTP to phone (sign in/up with phone)
+  const signInWithPhone = async (mobile: string) => {
+    setLoading(true);
     try {
-      const email = `${mobile}@example.com`;
-      const password = 'password123';
+      // Must be in E.164 format. We'll assume Indian numbers for demo. Adjust country code as needed.
+      const phone = mobile.startsWith('+') ? mobile : '+91' + mobile;
 
-      let authResponse = await supabase.auth.signInWithPassword({ email, password });
+      // Always try signInWithOtp to trigger OTP send
+      const { error } = await supabase.auth.signInWithOtp({
+        phone,
+        options: {
+          shouldCreateUser: true, // will create user if doesn't exist
+        }
+      });
 
-      // Handle sign up if user doesn't exist
-      if (authResponse.error && authResponse.error.message === 'Invalid login credentials') {
-        authResponse = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: `User ${mobile}`,
-              mobile: mobile,
-            },
-            emailRedirectTo: `${window.location.origin}/`,
-          }
-        });
-        if (authResponse.error) throw authResponse.error;
-      }
-
-      if (authResponse.error) throw authResponse.error;
-
-      let newSession = authResponse.data.session;
-      if (!newSession) {
-        throw new Error("Authentication with Supabase failed. Email confirmation may be required.");
-      }
-      setSession(newSession);
-      setUser(newSession.user);
-
-      // Get the actual user role from DB (so manual promotion works)
-      const dbRole = await fetchUserRoleFromDb(newSession.user.id);
-
-      const sessionData = {
-        mobile,
-        role: dbRole || userType,
-        loginTime: new Date().toISOString()
-      };
-      localStorage.setItem('userSession', JSON.stringify(sessionData));
-      setUserRole(dbRole || userType);
       setLoading(false);
+
+      if (error) {
+        console.error('Send OTP error:', error);
+        return { error };
+      }
 
       return { error: null };
     } catch (error) {
-      console.error('Auth error:', error);
       setLoading(false);
+      console.error('signInWithPhone error:', error);
+      return { error };
+    }
+  };
+
+  // Verify OTP for login/signup
+  const verifyOtp = async (mobile: string, otp: string) => {
+    setLoading(true);
+    try {
+      const phone = mobile.startsWith('+') ? mobile : '+91' + mobile;
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone,
+        token: otp,
+        type: 'sms'
+      });
+
+      setLoading(false);
+
+      if (error) {
+        console.error('OTP verification error:', error);
+        return { error };
+      }
+
+      // Update session and user
+      setUser(data?.user ?? null);
+      setSession(data?.session ?? null);
+
+      // Fetch latest userRole after success
+      if (data?.user) {
+        const role = await fetchUserRoleFromDb(data.user.id);
+        setUserRole(role || null);
+        const old = localStorage.getItem('userSession');
+        let obj = { mobile: data.user.phone || '', role, loginTime: new Date().toISOString() };
+        if (old) {
+          try {
+            obj = { ...JSON.parse(old), role };
+          } catch {}
+        }
+        localStorage.setItem('userSession', JSON.stringify(obj));
+      } else {
+        setUserRole(null);
+      }
+
+      return { error: null };
+    } catch (error) {
+      setLoading(false);
+      console.error('verifyOtp error:', error);
       return { error };
     }
   };
@@ -159,7 +186,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       user,
       session,
       loading,
-      signIn,
+      signInWithPhone,
+      verifyOtp,
       signOut,
       userRole
     }}>
@@ -175,4 +203,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
