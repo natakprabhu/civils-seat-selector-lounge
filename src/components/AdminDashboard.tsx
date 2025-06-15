@@ -75,17 +75,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
   // --- SEAT COUNTS LOGIC FROM REAL DATABASE ---
   const totalSeats = seats.length;
-  const availableSeats = seats.filter(s => s.status === 'vacant').length;
-  const onHoldSeats = seats.filter(s => s.status === 'on_hold').length;
+
+  // On Hold: bookings with status 'pending'
+  const onHoldBookings = bookings.filter(b => b.status === 'pending');
+  const onHold = onHoldBookings.length;
+
+  // Booked: seat ids from seats that are 'booked' and all bookings that are 'approved'
+  const bookedSeatsSet = new Set(
+    seats.filter(s => s.status === 'booked').map(s => s.id)
+  );
+  bookings.forEach(b => {
+    if (b.status === 'approved') {
+      bookedSeatsSet.add(b.seat_id);
+    }
+  });
+  const booked = bookedSeatsSet.size;
+
+  const availableSeats = totalSeats - onHold - booked;
 
   const stats = {
+    totalSeats,
+    availableSeats,
+    onHold,
     totalRequests: legitimateBookings.length,
     pendingRequests: legitimateBookings.filter(r => r.status === 'pending').length,
     approvedRequests: legitimateBookings.filter(r => r.status === 'approved').length,
     rejectedRequests: legitimateBookings.filter(r => r.status === 'cancelled').length,
-    totalSeats,
-    availableSeats,
-    onHoldSeats,
   };
 
   if (currentView === 'notices') {
@@ -181,7 +196,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-400">On Hold</p>
-                  <p className="text-2xl font-bold text-yellow-400">{stats.onHoldSeats}</p>
+                  <p className="text-2xl font-bold text-yellow-400">{stats.onHold}</p>
                 </div>
                 <Clock className="w-8 h-8 text-yellow-400" />
               </div>

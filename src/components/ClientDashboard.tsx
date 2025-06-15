@@ -121,10 +121,27 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     seatId: ''
   });
 
-  // Calculate seat statistics using real data
+  // Calculate current booking and seat statistics using real-time database data
   const totalSeats = seats.length;
-  const availableSeats = seats.filter(s => s.status === 'vacant').length;
-  const onHoldSeats = seats.filter(s => s.status === 'on_hold').length;
+
+  // On Hold: booking rows where status is 'pending'
+  const onHoldBookings = bookings.filter(b => b.status === 'pending');
+  const onHold = onHoldBookings.length;
+
+  // Booked: seats that are marked as 'booked' either by seat status or by an approved booking
+  const bookedSeatsSet = new Set(
+    // Seats from main table that have status "booked"
+    seats.filter(s => s.status === 'booked').map(s => s.id)
+  );
+  bookings.forEach(b => {
+    if (b.status === 'approved') {
+      bookedSeatsSet.add(b.seat_id);
+    }
+  });
+  const booked = bookedSeatsSet.size;
+
+  // Available: totalSeats - onHold (pending bookings) - booked
+  const availableSeats = totalSeats - onHold - booked;
 
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [bookingFormDuration, setBookingFormDuration] = useState('');
@@ -589,7 +606,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">On Hold</p>
-                <p className="text-2xl font-bold text-white">{onHoldSeats}</p>
+                <p className="text-2xl font-bold text-white">{onHold}</p>
               </div>
               <div className="w-12 h-12 bg-gradient-to-br from-slate-700/30 to-slate-900/30 rounded-lg flex items-center justify-center border border-slate-600">
                 <Clock className="w-6 h-6 text-slate-300" />
