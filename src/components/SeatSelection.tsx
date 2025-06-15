@@ -4,6 +4,29 @@ import SeatIcon from './SeatIcon';
 import { Seat } from '@/hooks/useSeats';
 import { BookingRequest } from '@/hooks/useBookings';
 
+// Map out the left and right seat arrangement as per HTML
+const LEFT_LAYOUT = [
+  ['A1', 'A2'],
+  ['B1', 'B2', 'B3', 'B4'],
+  ['C1', 'C2', 'C3', 'C4'],
+  ['D1', 'D2', 'D3', 'D4'],
+  ['E1', 'E2', 'E3', 'E4'],
+  ['F1', 'F2', 'F3', 'F4'],
+];
+
+const RIGHT_LAYOUT = [
+  ['A5', 'A6', 'A7'],
+  ['B5', 'B6', 'B7'],
+  ['C5', 'C6', 'C7'],
+  ['D5', 'D6', 'D7'],
+  ['E5', 'E6', 'E7'],
+  ['F5', 'F6', 'F7'],
+  ['G5', 'G6', 'G7'],
+  ['H5', 'H6', 'H7'],
+  ['I5', 'I6', 'I7'],
+  ['J5', 'J6', 'J7'],
+];
+
 interface SeatSelectionProps {
   seats: Seat[];
   selectedSeat: string | null;
@@ -14,23 +37,15 @@ interface SeatSelectionProps {
   userId: string | undefined;
 }
 
-const getFloorPlanRows = (seats: Seat[]) => {
-  // Group seats by row letter (first char of seat_number)
-  const rowMap: Record<string, Seat[]> = {};
-  seats.forEach(seat => {
-    const row = seat.seat_number.charAt(0);
-    if (!rowMap[row]) rowMap[row] = [];
-    rowMap[row].push(seat);
+const getSeatByNumber = (seats: Seat[]) => {
+  const map: Record<string, Seat> = {};
+  seats.forEach((seat) => {
+    map[seat.seat_number] = seat;
   });
-  // Sort rows by row key; within each row, sort by seat_number
-  const sortedRows = Object.entries(rowMap).sort((a, b) => a[0].localeCompare(b[0]));
-  return sortedRows.map(([row, seatsInRow]) => ({
-    row,
-    seats: seatsInRow.sort((a, b) => a.seat_number.localeCompare(b.seat_number))
-  }));
+  return map;
 };
 
-const SeatSelection = ({
+const SeatSelection: React.FC<SeatSelectionProps> = ({
   seats,
   selectedSeat,
   onSeatSelect,
@@ -38,9 +53,9 @@ const SeatSelection = ({
   bookingInProgress,
   bookings,
   userId,
-}: SeatSelectionProps) => {
-  // Find pending seat ID for this user
-  let pendingSeatId = null;
+}) => {
+  // Find pending seat for this user (for on_hold highlight)
+  let pendingSeatId: string | null = null;
   if (bookings && userId) {
     const pendingBooking = bookings.find(
       (b) => b.user_id === userId && b.status === "pending"
@@ -50,44 +65,117 @@ const SeatSelection = ({
     }
   }
 
-  // Floor plan rows (A, B, C, etc)
-  const seatRows = getFloorPlanRows(seats);
+  // For easier lookup by seat_number
+  const seatsByNumber = getSeatByNumber(seats);
 
+  /** Helper to get status for seat (selected, vacant, on_hold, booked) */
+  function getSeatStatus(seat: Seat): 'vacant' | 'selected' | 'pending' | 'booked' {
+    // Selected in this UI
+    if (selectedSeat && seat.id === selectedSeat) return 'selected';
+    // Pending for this user
+    if (pendingSeatId && seat.id === pendingSeatId && seat.status !== 'booked') return 'pending';
+    // Underlying status
+    if (seat.status === 'booked') return 'booked';
+    if (seat.status === 'on_hold') return 'pending';
+    return 'vacant';
+  }
+
+  // Aisle label styling using tailwind: rotate, vertical writing, faded
+  // Stairs and Washroom boxes
   return (
-    <div className="space-y-4">
-      {seatRows.map(({ row, seats: rowSeats }) => (
-        <div key={row} className="flex flex-row gap-3 justify-center">
-          {rowSeats.map((seat) => {
-            let seatStatus = seat.status;
-            if (
-              pendingSeatId &&
-              seat.id === pendingSeatId &&
-              seat.status !== "booked"
-            ) {
-              seatStatus = "on_hold"; // Show "on_hold" for this user's pending seat
-            }
-            return (
-              <SeatIcon
-                key={seat.id}
-                seatNumber={seat.seat_number}
-                status={
-                  selectedSeat === seat.id
-                    ? "selected"
-                    : seatStatus === "vacant"
-                    ? "vacant"
-                    : seatStatus === "on_hold"
-                    ? "pending"
-                    : seatStatus === "booked"
-                    ? "booked"
-                    : "vacant"
-                }
-                onClick={() => onSeatSelect(seat.id)}
-                disabled={bookingInProgress || seatStatus !== "vacant"}
-              />
-            );
-          })}
+    <div className="w-full flex justify-center items-stretch mt-2 gap-4 flex-wrap">
+      {/* Left block */}
+      <div className="flex flex-col items-end">
+        {LEFT_LAYOUT.map((row, i) => (
+          <div key={i} className="flex flex-row mb-1">
+            {row.map((seatNum) => {
+              const seat = seatsByNumber[seatNum];
+              if (!seat) {
+                // Render placeholder (empty/filler seat)
+                return (
+                  <div
+                    key={seatNum}
+                    className="w-10 h-10 m-1 rounded bg-gray-200 opacity-70"
+                  />
+                );
+              }
+              const status = getSeatStatus(seat);
+              return (
+                <div key={seatNum} className="m-1">
+                  <SeatIcon
+                    seatNumber={seat.seat_number}
+                    status={status}
+                    onClick={() =>
+                      !bookingInProgress &&
+                      status === "vacant" &&
+                      onSeatSelect(seat.id)
+                    }
+                    disabled={bookingInProgress || status !== "vacant"}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        ))}
+        {/* Stairs and Washroom at bottom */}
+        <div className="flex flex-row mt-2 w-full">
+          <div className="flex-1 flex items-center justify-center m-1">
+            <div className="w-full h-16 bg-gradient-to-t from-slate-400 to-slate-100 border rounded text-sm font-bold flex items-center justify-center shadow box-border">
+              Stairs
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-center m-1">
+            <div className="w-full h-16 bg-slate-200 border rounded text-sm font-bold flex items-center justify-center shadow box-border">
+              Washroom
+            </div>
+          </div>
         </div>
-      ))}
+      </div>
+      {/* Aisle */}
+      <div className="relative flex flex-col mx-2">
+        <div className="flex-1" />
+        <div className="w-12 flex items-center justify-center">
+          <span className="writing-vertical font-bold text-slate-400 text-base"
+            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
+            Aisle
+          </span>
+        </div>
+        <div className="absolute inset-y-0 left-1 w-0.5 bg-gray-300 rounded" />
+        <div className="absolute inset-y-0 right-1 w-0.5 bg-gray-300 rounded" />
+      </div>
+      {/* Right block */}
+      <div className="flex flex-col items-start">
+        {RIGHT_LAYOUT.map((row, i) => (
+          <div key={i} className="flex flex-row mb-1">
+            {row.map((seatNum) => {
+              const seat = seatsByNumber[seatNum];
+              if (!seat) {
+                return (
+                  <div
+                    key={seatNum}
+                    className="w-10 h-10 m-1 rounded bg-gray-200 opacity-70"
+                  />
+                );
+              }
+              const status = getSeatStatus(seat);
+              return (
+                <div key={seatNum} className="m-1">
+                  <SeatIcon
+                    seatNumber={seat.seat_number}
+                    status={status}
+                    onClick={() =>
+                      !bookingInProgress &&
+                      status === "vacant" &&
+                      onSeatSelect(seat.id)
+                    }
+                    disabled={bookingInProgress || status !== "vacant"}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
