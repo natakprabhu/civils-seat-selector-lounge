@@ -1,3 +1,4 @@
+
 import React from 'react';
 import SeatIcon from './SeatIcon';
 import { Seat } from '@/hooks/useSeats';
@@ -69,23 +70,23 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   bookings,
   userId,
 }) => {
-  // For easier lookup by seat_number
   const seatsByNumber = React.useMemo(() => {
     return getSeatByNumber(seats);
   }, [seats]);
 
-  // Find booking for a seat
+  // FIXED: Only match bookings that are status 'pending' or 'approved'.
+  /** Returns 'pending' | 'approved' | null for UI logic, ignores 'cancelled'/'expired' */
   function getBookingStatus(seatId: string): 'pending' | 'approved' | null {
-    const found = bookings.find(b => b.seat_id === seatId && (b.status === "pending" || b.status === "approved"));
-    return found ? found.status : null;
+    const found = bookings.find(
+      b => b.seat_id === seatId && (b.status === "pending" || b.status === "approved")
+    );
+    return found ? (found.status as 'pending' | 'approved') : null;
   }
 
   function getSeatStatus(seat: Seat): 'vacant' | 'selected' | 'pending' | 'booked' {
-    // If selected, this has top priority
     if (selectedSeat && seat.id === selectedSeat) {
       return 'selected';
     }
-    // Use booking status from bookings table
     const bookingStatus = getBookingStatus(seat.id);
     if (bookingStatus === "pending") {
       return 'pending';
