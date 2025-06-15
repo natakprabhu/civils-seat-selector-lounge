@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -11,19 +10,33 @@ export function useOtpRegistration() {
   const registerWithOtp = async (email: string, password: string) => {
     setLoading(true);
     setSignupError(null);
-    // Call edge function to send OTP
-    const response = await fetch("/functions/v1/send-otp-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    if (response.ok) {
-      setStep("otp");
-      setLoading(false);
-      return true;
-    } else {
-      const data = await response.json();
-      setSignupError(data.error || "Failed to send OTP");
+    // Use absolute URL to Supabase edge function
+    try {
+      const response = await fetch(
+        "https://llvujxdmzuyebkzuutqn.supabase.co/functions/v1/send-otp-email",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }
+      );
+      if (response.ok) {
+        setStep("otp");
+        setLoading(false);
+        return true;
+      } else {
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          data = { error: "Failed to get error details from server" };
+        }
+        setSignupError(data.error || "Failed to send OTP");
+        setLoading(false);
+        return false;
+      }
+    } catch (err: any) {
+      setSignupError("Network error: " + (err?.message || "Unknown error"));
       setLoading(false);
       return false;
     }
