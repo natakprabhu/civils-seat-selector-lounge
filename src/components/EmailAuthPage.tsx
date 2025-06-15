@@ -17,10 +17,18 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [mobile, setMobile] = useState("");
   const [message, setMessage] = useState("");
   const [errorText, setErrorText] = useState<string | null>(null);
+
+  // For local field errors (useful for registration client-side errors)
+  const [fieldErrors, setFieldErrors] = useState<{
+    fullName?: string;
+    mobile?: string;
+    passwordMatch?: string;
+  }>({});
 
   // Helper: handle auth result & show toasts and user feedback
   const handleAuthResult = ({ error }: { error: any }) => {
@@ -56,26 +64,35 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
     }
   };
 
-  // Main submit handler (no OTP, standard flows)
+  // Main submit handler (with new signup logic)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     setMessage("");
     setErrorText(null);
+    setFieldErrors({});
 
     // Validate fullName and mobile in signup mode
     if (mode === "signup") {
+      let errors: { fullName?: string; mobile?: string; passwordMatch?: string } = {};
+
       if (!fullName.trim()) {
-        setErrorText("Full name is required.");
-        return;
+        errors.fullName = "Full name is required.";
+      }
+      if (!/^[A-Z ]{2,}$/.test(fullName.trim())) {
+        errors.fullName = "Full name must be in uppercase letters.";
       }
       if (!mobile.trim()) {
-        setErrorText("Mobile is required.");
-        return;
+        errors.mobile = "Mobile is required.";
       }
-      // Simple mobile number validation (India format, 10 digits)
       if (!/^[6-9]\d{9}$/.test(mobile.trim())) {
-        setErrorText("Please enter a valid 10-digit mobile number.");
+        errors.mobile = "Please enter a valid 10-digit mobile number.";
+      }
+      if (password !== confirmPassword) {
+        errors.passwordMatch = "Passwords do not match.";
+      }
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
         return;
       }
     }
@@ -122,11 +139,13 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
     }
   };
 
-  // Reset password field and messages on mode change
+  // Reset password, confirmPassword, field errors, and messages on mode change
   React.useEffect(() => {
     setMessage("");
     setPassword("");
+    setConfirmPassword("");
     setErrorText(null);
+    setFieldErrors({});
     if (mode === "signup") {
       setFullName("");
       setMobile("");
@@ -158,30 +177,41 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
               </div>
             )}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === "signup" && (
-                <SignupExtraFields
-                  fullName={fullName}
-                  setFullName={setFullName}
-                  mobile={mobile}
-                  setMobile={setMobile}
-                  loading={loading}
-                />
+              {
+                mode === "signup" && (
+                  <SignupExtraFields
+                    fullName={fullName}
+                    setFullName={setFullName}
+                    mobile={mobile}
+                    setMobile={setMobile}
+                    loading={loading}
+                    password={password}
+                    setPassword={setPassword}
+                    confirmPassword={confirmPassword}
+                    setConfirmPassword={setConfirmPassword}
+                    errors={fieldErrors}
+                  />
+                )
+              }
+              {mode !== "signup" && (
+                <>
+                  <EmailInput email={email} setEmail={setEmail} loading={loading} />
+                  <PasswordInput
+                    password={password}
+                    setPassword={setPassword}
+                    loading={loading}
+                    mode={mode}
+                  />
+                </>
               )}
-              <EmailInput email={email} setEmail={setEmail} loading={loading} />
-              <PasswordInput
-                password={password}
-                setPassword={setPassword}
-                loading={loading}
-                mode={mode}
-              />
               <Button
                 type="submit"
                 className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white text-lg font-semibold shadow-lg border border-slate-600"
                 disabled={
                   loading ||
                   !email ||
-                  (mode !== "forgot" && !password) ||
-                  (mode === "signup" && (!fullName || !mobile))
+                  (mode === "login" && !password) ||
+                  (mode === "signup" && (!fullName || !mobile || !password || !confirmPassword))
                 }
               >
                 {loading && <Loader2 className="animate-spin mr-2" />}
