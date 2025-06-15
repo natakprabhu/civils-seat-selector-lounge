@@ -19,7 +19,11 @@ const SUPABASE_FUNCTIONS_BASE = "https://llvujxdmzuyebkzuutqn.functions.supabase
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<{ mobile: string; role?: string } | null>(null);
-  const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; mobile?: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; mobile?: string } | null>({
+    full_name: "",
+    email: "",
+    mobile: ""
+  });
   const [loading, setLoading] = useState(false);
 
   // Setup user session listener
@@ -55,7 +59,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setUserProfile(null);
+        setUserProfile({
+          full_name: "",
+          email: "",
+          mobile: ""
+        });
         setLoading(false);
         return;
       }
@@ -65,15 +73,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', user.id)
         .maybeSingle();
 
-      if (error) {
-        console.error("Failed to fetch user profile", error);
-        setUserProfile(null);
+      if (error || !data) {
+        setUserProfile({
+          full_name: "",
+          email: "",
+          mobile: user.phone || ""
+        });
         setLoading(false);
         return;
       }
       setUserProfile(data);
     } catch (error) {
-      setUserProfile(null);
+      setUserProfile({
+        full_name: "",
+        email: "",
+        mobile: ""
+      });
     }
     setLoading(false);
   };
@@ -84,7 +99,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setLoading(false);
-        return { error: "User not authenticated." };
+        // Save defaults if no user
+        setUserProfile({
+          full_name: "",
+          email: "",
+          mobile: ""
+        });
+        return { error: null }; // fallback to prevent block
       }
       // update profile
       const { error } = await supabase

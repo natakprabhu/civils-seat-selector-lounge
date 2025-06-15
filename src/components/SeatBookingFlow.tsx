@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +21,7 @@ const SeatBookingFlow: React.FC<SeatBookingFlowProps> = ({
 }) => {
   const [showBookingForm, setShowBookingForm] = useState(false);
   const { createBooking } = useBookings();
+  const { lockSeat, releaseSeatLock } = useSeats();
 
   const handleConfirmSelection = () => {
     setShowBookingForm(true);
@@ -31,11 +31,25 @@ const SeatBookingFlow: React.FC<SeatBookingFlowProps> = ({
     const durationMonths = parseInt(bookingData.duration);
     const totalAmount = durationMonths * selectedSeat.monthly_rate;
 
+    // Try to lock the seat before creating a booking
+    const lockResult = await lockSeat(selectedSeat.id);
+    if (lockResult.error) {
+      toast({
+        title: "Booking Error",
+        description: lockResult.error.message || "Failed to lock seat for booking.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const { error } = await createBooking(
       selectedSeat.id,
       durationMonths,
       totalAmount
     );
+
+    // Always release the lock after booking attempt (success or failure)
+    await releaseSeatLock(selectedSeat.id);
 
     if (error) {
       toast({

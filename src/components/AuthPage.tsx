@@ -113,10 +113,19 @@ const AuthPage: React.FC = () => {
   // Show modal if user is logged in but their profile has missing name or email
   const needsProfile = !!user && (!!userProfile && (!userProfile.full_name || !userProfile.email));
 
+  // Add: Show profile modal if userProfile is missing, or missing fields, or has empty values by default
+  const shouldShowProfileModal = !!user && (
+    !userProfile ||
+    !userProfile.full_name ||
+    !userProfile.email ||
+    userProfile.full_name.trim() === "" ||
+    userProfile.email.trim() === ""
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 flex items-center justify-center p-4">
       {/* Show modal only if user needs to complete profile */}
-      {needsProfile && !!user?.mobile && !!completeProfile && (
+      {shouldShowProfileModal && !!user?.mobile && !!completeProfile && (
         <ProfileSetupModal
           open={true}
           initialMobile={user.mobile}
