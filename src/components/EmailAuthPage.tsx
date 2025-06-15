@@ -173,16 +173,19 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
             )}
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "signup" && (
-                <SignupExtraFields
-                  fullName={fullName}
-                  setFullName={setFullName}
-                  mobile={mobile}
-                  setMobile={setMobile}
-                  loading={loading}
-                  password={password}
-                  setPassword={setPassword}
-                  errors={fieldErrors}
-                />
+                <>
+                  <EmailInput email={email} setEmail={setEmail} loading={loading} />
+                  <SignupExtraFields
+                    fullName={fullName}
+                    setFullName={setFullName}
+                    mobile={mobile}
+                    setMobile={setMobile}
+                    loading={loading}
+                    password={password}
+                    setPassword={setPassword}
+                    errors={fieldErrors}
+                  />
+                </>
               )}
               {mode !== "signup" && (
                 <>
