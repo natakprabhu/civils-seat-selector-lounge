@@ -10,8 +10,9 @@ function generateOtp(length = 6) {
     .join("");
 }
 
+const corsOrigin = Deno.env.get("CORS_ORIGIN") || "";
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": corsOrigin,
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
