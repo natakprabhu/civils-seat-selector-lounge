@@ -275,9 +275,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         paidAmount: undefined,
         paidOn: undefined,
         paymentMethod: undefined,
-        validTill: myBooking.end_date ? `${myBooking.end_date}` : '',
+        validTill: '',    // No end_date available on BookingRequest
         remainingDays: undefined,
-        startDate: myBooking.start_date ? `${myBooking.start_date}` : '',
+        startDate: '',    // No start_date available on BookingRequest
         planDetails: myBooking.duration_months
           ? `${myBooking.duration_months} Month${myBooking.duration_months > 1 ? 's' : ''}`
           : '',
