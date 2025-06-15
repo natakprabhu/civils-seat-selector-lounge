@@ -346,6 +346,82 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     }
   }, [myBooking, profile, userMobile]);
 
+  const [userTransactions, setUserTransactions] = useState<
+    Array<{
+      id: string;
+      type: 'New Booking' | 'Change Request';
+      seatNumber?: string;
+      section?: string;
+      duration?: number;
+      totalAmount?: number;
+      status: string;
+      requestedAt: string;
+      description?: string;
+    }>
+  >([]);
+
+  useEffect(() => {
+    const fetchUserTransactions = async () => {
+      if (!user?.id) {
+        setUserTransactions([]);
+        return;
+      }
+
+      // Fetch seat bookings for user
+      const { data: bookings } = await supabase
+        .from('seat_bookings')
+        .select(`
+          id, seat_id, duration_months, total_amount, status, requested_at, seat:seats(seat_number, section)
+        `)
+        .eq('user_id', user.id)
+        .order('requested_at', { ascending: false });
+
+      // Map to transaction format
+      const formattedBookings =
+        (bookings || []).map(b => ({
+          id: b.id,
+          type: 'New Booking' as const,
+          seatNumber: b.seat?.seat_number,
+          section: b.seat?.section,
+          duration: b.duration_months,
+          totalAmount: b.total_amount,
+          status: b.status,
+          requestedAt: b.requested_at,
+        }));
+
+      // Fetch seat change requests for user
+      const { data: changes } = await supabase
+        .from('seat_change_requests')
+        .select(`
+          id, new_seat_id, status, requested_at, reason, fee_amount, new_seat:seats(seat_number, section)
+        `)
+        .eq('user_id', user.id)
+        .order('requested_at', { ascending: false });
+
+      // Map to transaction format
+      const formattedChanges =
+        (changes || []).map(c => ({
+          id: c.id,
+          type: 'Change Request' as const,
+          seatNumber: c.new_seat?.seat_number,
+          section: c.new_seat?.section,
+          duration: undefined,
+          totalAmount: c.fee_amount,
+          status: c.status,
+          requestedAt: c.requested_at,
+          description: c.reason,
+        }));
+
+      // Combine and sort by requestedAt descending
+      const allTransactions = [...formattedBookings, ...formattedChanges]
+        .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+
+      setUserTransactions(allTransactions);
+    };
+
+    fetchUserTransactions();
+  }, [user?.id]);
+
   const handleRequestSeatChange = () => {
     if (hasPendingSeatChange) {
       toast({
@@ -707,7 +783,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </Card>
         </div>
 
-        {/* Section 3: My Booking Details - Show message if no transactions */}
+        {/* Section 3: My Booking Details - Now shows booking & seat change transactions */}
         <Card className="dashboard-card">
           <CardHeader className="border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
             <CardTitle className="text-xl font-bold text-white flex items-center justify-between">
@@ -723,10 +799,57 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="text-center py-8">
-              <Receipt className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-400">No booking details yet. Book a seat to get started!</p>
-            </div>
+            {userTransactions.length === 0 ? (
+              <div className="text-center py-8">
+                <Receipt className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                <p className="text-slate-400">No booking or seat change details yet. Book a seat to get started!</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-800">
+                {userTransactions.map(txn => (
+                  <div key={txn.id} className="py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                    <div>
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mr-2
+                        ${txn.type === 'New Booking' ? 'bg-blue-800 text-blue-200' : 'bg-violet-800 text-violet-200'}
+                      `}>
+                        {txn.type}
+                      </span>
+                      <span className="text-sm text-white font-medium">
+                        {txn.type === "New Booking" ? (
+                          <>
+                            {txn.seatNumber ? `Seat ${txn.seatNumber}` : 'No seat'}{txn.section ? ` (${txn.section})` : ''} •{" "}
+                            {txn.duration ? `${txn.duration} month${txn.duration > 1 ? 's' : ''}` : ''}
+                          </>
+                        ) : (
+                          <>
+                            Change to {txn.seatNumber ? `Seat ${txn.seatNumber}` : 'new seat'}{txn.section ? ` (${txn.section})` : ''} 
+                            {txn.description ? <> • <span className="italic">{txn.description}</span></> : null}
+                          </>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 text-sm">
+                      <span className="text-slate-400">
+                        {txn.requestedAt ? new Date(txn.requestedAt).toLocaleString() : ""}
+                      </span>
+                      <Badge
+                        variant={
+                          txn.status === 'approved' ? 'default'
+                          : txn.status === 'pending' ? 'secondary'
+                          : 'destructive'
+                        }
+                      >
+                        {txn.status.charAt(0).toUpperCase() + txn.status.slice(1)}
+                      </Badge>
+                      <span className="flex items-center gap-1">
+                        <IndianRupee className="w-4 h-4 text-green-400" />
+                        {txn.totalAmount ? txn.totalAmount : 0}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
