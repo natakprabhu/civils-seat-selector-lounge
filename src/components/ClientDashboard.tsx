@@ -503,6 +503,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     return timeLeft;
   };
 
+  // Prepare all timer values once, indexed the same as transactions, so hooks are called in same order each render
+  const bookingTimers = userTransactions.map(txn => useBookingTimer(txn.requestedAt));
+
   if (currentView === 'seat-change') {
     return (
       <SeatChangeRequest
@@ -861,15 +864,12 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               </div>
             ) : (
               <div className="divide-y divide-slate-800">
-                {userTransactions.map(txn => {
-                  // Show timer only for pending bookings and pending seat change requests
-                  let showTimer = txn.status === "pending" && txn.requestedAt;
-                  let timeLeft = 0, mins = 0, secs = 0;
-                  if (showTimer) {
-                    timeLeft = useBookingTimer(txn.requestedAt);
-                    mins = Math.floor(timeLeft / 60);
-                    secs = timeLeft % 60;
-                  }
+                {userTransactions.map((txn, idx) => {
+                  // Always use the timer from the array so hooks are called in a static order
+                  const timeLeft = bookingTimers[idx] || 0;
+                  const showTimer = txn.status === "pending" && txn.requestedAt;
+                  const mins = Math.floor(timeLeft / 60);
+                  const secs = timeLeft % 60;
 
                   return (
                     <div key={txn.id} className="py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -956,7 +956,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                         )}
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             )}
