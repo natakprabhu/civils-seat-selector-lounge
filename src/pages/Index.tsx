@@ -1,25 +1,12 @@
 
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import EmailAuthPage from "@/components/EmailAuthPage";
+import ClientDashboard from "@/components/ClientDashboard";
+import AdminDashboard from "@/components/AdminDashboard";
+import StaffDashboard from "@/components/StaffDashboard";
 
 const Index = () => {
-  const { user, loading } = useAuth();
-  const [fullName, setFullName] = useState<string>("");
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (user?.id) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", user.id)
-          .maybeSingle();
-        setFullName(data?.full_name || "");
-      }
-    };
-    fetchProfile();
-  }, [user]);
+  const { user, userRole, loading, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -30,21 +17,29 @@ const Index = () => {
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-white">Not logged in</div>
-      </div>
-    );
+    // Pass onAuth callback for reloading user state
+    return <EmailAuthPage onAuth={() => window.location.reload()} />;
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950">
-      <h1 className="text-3xl md:text-5xl font-extrabold text-white">
-        {fullName ? `WELCOME ${fullName.toUpperCase()}` : "WELCOME"}
-      </h1>
-    </div>
-  );
+  const handleLogout = async () => {
+    await signOut();
+  };
+
+  // Route based on user role
+  switch (userRole) {
+    case 'admin':
+      return <AdminDashboard onLogout={handleLogout} />;
+    case 'staff':
+      return <StaffDashboard onLogout={handleLogout} />;
+    case 'client':
+    default:
+      return (
+        <ClientDashboard 
+          userMobile={user.email || user.user_metadata?.email || ''} 
+          onLogout={handleLogout} 
+        />
+      );
+  }
 };
 
 export default Index;
-
