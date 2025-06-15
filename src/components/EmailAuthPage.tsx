@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Mail, Lock, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useOtpRegistration } from "@/hooks/useOtpRegistration";
 
 type Mode = "login" | "signup" | "forgot";
 
@@ -15,6 +15,19 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+
+  // Add OTP registration hook/logic for signup
+  const {
+    step,
+    loading: otpLoading,
+    signupError,
+    registerWithOtp,
+    validateOtpAndRegister,
+    reset: resetOtpFlow,
+  } = useOtpRegistration();
+
+  // Repurpose signup mode to use OTP flow
+  const [otpInput, setOtpInput] = useState("");
 
   // Helper: handle auth result & show toasts
   const handleAuthResult = ({ error }: { error: any }) => {
@@ -41,9 +54,29 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
     }
   };
 
-  // Submit handler (login | signup | forgot)
+  // New submit handler, splits between login/forgot/otp-signup sub-flows
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (mode === "signup") {
+      if (step === "form") {
+        // Send OTP
+        await registerWithOtp(email, password);
+      } else if (step === "otp") {
+        // Validate OTP and register
+        const success = await validateOtpAndRegister(email, password, otpInput);
+        if (success) {
+          toast({
+            title: "Registration successful",
+            description: "You can now log in with your credentials.",
+          });
+          setMode("login");
+          resetOtpFlow();
+        }
+      }
+      return;
+    }
+
     setMessage("");
     setLoading(true);
     try {
@@ -102,54 +135,96 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
           </CardHeader>
           <CardContent className="space-y-5 px-8 pb-8">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="text-sm text-slate-300 font-medium">Email</label>
-                <div className="mt-1 relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <Input
-                    type="email"
-                    className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    autoComplete="email"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-              {mode !== "forgot" && (
-                <div>
-                  <label className="text-sm text-slate-300 font-medium">Password</label>
-                  <div className="mt-1 relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              {mode === "signup" && step === "otp" ? (
+                <>
+                  <div>
+                    <label className="text-sm text-slate-300 font-medium">
+                      Enter the OTP sent to your email
+                    </label>
                     <Input
-                      type="password"
-                      className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      autoComplete={(mode === "login" ? "current-password" : "new-password")}
+                      type="text"
+                      className="pl-3 h-12 text-base bg-slate-800 border-slate-600 text-white tracking-widest text-center"
+                      placeholder="Enter OTP"
+                      value={otpInput}
+                      onChange={e => setOtpInput(e.target.value)}
                       required
-                      minLength={6}
-                      disabled={loading}
+                      disabled={loading || otpLoading}
+                      maxLength={6}
                     />
                   </div>
-                </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-sm text-slate-300 font-medium">
+                      Email
+                    </label>
+                    <div className="mt-1 relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <Input
+                        type="email"
+                        className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        autoComplete="email"
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                  {mode !== "forgot" && (
+                    <div>
+                      <label className="text-sm text-slate-300 font-medium">
+                        Password
+                      </label>
+                      <div className="mt-1 relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                        <Input
+                          type="password"
+                          className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
+                          placeholder="Enter your password"
+                          value={password}
+                          onChange={e => setPassword(e.target.value)}
+                          autoComplete={
+                            mode === "login"
+                              ? "current-password"
+                              : "new-password"
+                          }
+                          required
+                          minLength={6}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
               <Button
                 type="submit"
                 className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white text-lg font-semibold shadow-lg border border-slate-600"
-                disabled={loading || !email || (mode !== "forgot" && !password)}
+                disabled={
+                  loading ||
+                  !email ||
+                  (mode !== "forgot" && !password) ||
+                  (mode === "signup" && step === "otp" && !otpInput)
+                }
               >
                 {loading && <Loader2 className="animate-spin mr-2" />}
                 {mode === "login"
                   ? "Log in"
                   : mode === "signup"
-                  ? "Create account"
+                  ? step === "otp"
+                    ? "Validate OTP & Register"
+                    : "Create account"
                   : "Send reset link"}
               </Button>
             </form>
+            {signupError && (
+              <div className="text-sm text-center text-red-400">
+                {signupError}
+              </div>
+            )}
             {message && (
               <div className="text-sm text-center text-green-400">{message}</div>
             )}
@@ -181,7 +256,10 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
                   <button
                     className="text-blue-400 hover:underline"
                     type="button"
-                    onClick={() => setMode("login")}
+                    onClick={() => {
+                      setMode("login");
+                      resetOtpFlow();
+                    }}
                   >
                     Log in
                   </button>

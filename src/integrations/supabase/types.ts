@@ -130,6 +130,27 @@ export type Database = {
           },
         ]
       }
+      pending_otps: {
+        Row: {
+          created_at: string | null
+          email: string
+          expires_at: string | null
+          otp: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          expires_at?: string | null
+          otp: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          expires_at?: string | null
+          otp?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
