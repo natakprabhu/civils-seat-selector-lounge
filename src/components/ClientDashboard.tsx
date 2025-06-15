@@ -70,7 +70,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   
   // Use real Supabase data
-  const { seats, loading: seatsLoading } = useSeats();
+  const { seats, loading: seatsLoading, lockSeat } = useSeats();
   const { createBooking } = useBookings();
   
   const [waitlistPosition] = useState(0);
@@ -107,19 +107,43 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const availableSeats = seats.filter(s => s.status === 'vacant').length;
   const onHoldSeats = seats.filter(s => s.status === 'on_hold').length;
 
-  const handleSeatClick = (seatId: string) => {
-    console.log('Seat clicked:', seatId);
+  const [selectedSeatId, setSelectedSeatId] = useState<string>('');
+  const [locking, setLocking] = useState(false);
+
+  const handleSeatClick = async (seatId: string) => {
     const seat = seats.find(s => s.id === seatId);
-    if (seat && seat.status === 'vacant') {
-      setSelectedSeat(seat.seat_number);
-      setBookingFormData({
-        ...bookingFormData,
-        seatId: seat.id
+    if (!seat || seat.status !== 'vacant') {
+      toast({
+        title: "Seat Unavailable",
+        description: "This seat is not available for booking.",
+        variant: "destructive"
       });
-      setShowBookingModal(true);
-    } else {
-      console.log('Seat not available or not found:', seat);
+      return;
     }
+
+    setLocking(true);
+    // Attempt to lock the seat
+    const { error } = await lockSeat(seatId);
+    setLocking(false);
+
+    if (error) {
+      toast({
+        title: "Error Locking Seat",
+        description: error.message || "Failed to place a lock. Try another seat.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSelectedSeatId(seatId);
+    setBookingFormData({
+      ...bookingFormData,
+      seatId: seatId
+    });
+  };
+
+  const handleConfirmSeat = () => {
+    setShowBookingModal(true);
   };
 
   const handleBookingSubmit = async () => {
@@ -542,12 +566,34 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             <CardTitle className="text-xl font-bold text-white">Live Seat Map</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <SeatSelection 
-              seats={seats}
-              selectedSeat={selectedSeat ? seats.find(s => s.seat_number === selectedSeat)?.id || null : null}
-              onSeatSelect={handleSeatClick}
-              onConfirmSelection={() => {}}
-            />
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              <div className="flex-1">
+                <SeatSelection 
+                  seats={seats}
+                  selectedSeat={selectedSeatId}
+                  onSeatSelect={handleSeatClick}
+                  showConfirmButton
+                  onConfirmSelection={handleConfirmSeat}
+                  locking={locking}
+                />
+              </div>
+              {/* Confirm Seat column (shows only if seat selected) */}
+              <div className="w-full md:w-1/3 mt-4 md:mt-0 flex flex-col items-center">
+                {selectedSeatId && (
+                  <div className="rounded-xl bg-slate-800/80 p-6 border border-slate-700/60 shadow-2xl flex flex-col items-center">
+                    <h3 className="text-lg font-bold text-white mb-2">Confirm Your Seat</h3>
+                    <div className="text-slate-300 mb-4">You have selected <span className="font-semibold text-cyan-300">Seat {seats.find(s => s.id === selectedSeatId)?.seat_number}</span>.</div>
+                    <Button 
+                      className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold"
+                      onClick={handleConfirmSeat}
+                      disabled={locking}
+                    >
+                      {locking ? "Locking Seat..." : "Confirm Seat"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -560,7 +606,9 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </DialogHeader>
           <div className="space-y-4">
             <div className="w-full h-32 bg-gradient-to-br from-slate-800 to-slate-700 rounded-lg flex items-center justify-center border border-slate-600">
-              <p className="text-slate-300 font-medium">Seat {selectedSeat} Image</p>
+              <p className="text-slate-300 font-medium">Seat {
+                seats.find(s => s.id === selectedSeatId)?.seat_number || ""
+              } Image</p>
             </div>
             
             <div>
@@ -600,7 +648,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             <div>
               <label className="text-sm font-medium text-slate-300">Selected Seat</label>
               <Input
-                value={`Seat ${selectedSeat}`}
+                value={`Seat ${seats.find(s => s.id === selectedSeatId)?.seat_number || ''}`}
                 readOnly
                 className="bg-slate-700 border-slate-600 text-white"
               />

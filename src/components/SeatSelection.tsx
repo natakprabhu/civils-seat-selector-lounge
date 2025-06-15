@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,13 +17,17 @@ interface SeatSelectionProps {
   selectedSeat: string | null;
   onSeatSelect: (seatId: string) => void;
   onConfirmSelection: () => void;
+  showConfirmButton?: boolean;
+  locking?: boolean;
 }
 
 const SeatSelection: React.FC<SeatSelectionProps> = ({
   seats,
   selectedSeat,
   onSeatSelect,
-  onConfirmSelection
+  onConfirmSelection,
+  showConfirmButton,
+  locking
 }) => {
   const { getSeatImage } = useSeatImages();
 
@@ -58,16 +61,14 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
 
   const getSeatStyle = (seatNumber: string) => {
     const seatData = getSeatData(seatNumber);
-    const isSelected = selectedSeat === seatData?.id;
-    
+    const isSelected = seatData && selectedSeat && seatData.id === selectedSeat;
     if (isSelected) {
-      return 'bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 text-white shadow-2xl shadow-cyan-500/50 border-2 border-cyan-300 scale-110 transform transition-all duration-300 ring-4 ring-cyan-400/30';
+      // Force on_hold style for the selected seat
+      return 'bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 text-white cursor-not-allowed shadow-xl shadow-amber-500/40 border-2 border-amber-300 ring-4 ring-amber-400/50';
     }
-    
     if (!seatData) {
       return 'bg-gradient-to-br from-slate-600 to-slate-700 text-slate-300 border border-slate-500';
     }
-    
     switch (seatData.status) {
       case 'vacant':
         return 'bg-gradient-to-br from-emerald-400 via-green-500 to-emerald-600 hover:from-emerald-500 hover:to-green-600 text-white cursor-pointer shadow-xl shadow-emerald-500/40 border-2 border-emerald-300 hover:border-emerald-200 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:shadow-emerald-400/50';
@@ -82,7 +83,12 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
     }
   };
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = (status: string, seatNumber: string) => {
+    const seatData = getSeatData(seatNumber);
+    if (seatData && selectedSeat && seatData.id === selectedSeat) {
+      // Show "On Hold (Selected)" for currently selected seat
+      return 'On Hold (Selected)';
+    }
     switch (status) {
       case 'on_hold': return 'On Hold';
       case 'booked': return 'Booked';
@@ -94,24 +100,22 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
 
   const handleSeatClick = (seatNumber: string) => {
     const seatData = getSeatData(seatNumber);
-    console.log('Seat clicked in SeatSelection:', seatNumber, seatData);
     if (seatData && seatData.status === 'vacant') {
-      console.log('Calling onSeatSelect with seat ID:', seatData.id);
       onSeatSelect(seatData.id);
-    } else {
-      console.log('Seat not clickable:', seatData?.status);
     }
   };
 
   const SeatComponent = ({ seatNumber }: { seatNumber: string }) => {
     const seatData = getSeatData(seatNumber);
     const seatImage = seatData ? getSeatImage(seatData.id) : null;
-    
+    const isSelected = seatData && selectedSeat && seatData.id === selectedSeat;
+
     return (
       <div
         className={`w-12 h-12 m-1 rounded-xl flex items-center justify-center font-bold text-xs transition-all duration-300 relative group ${getSeatStyle(seatNumber)}`}
         onClick={() => handleSeatClick(seatNumber)}
-        title={`Seat ${seatNumber} - ${getStatusLabel(seatData?.status || 'unknown')}`}
+        title={`Seat ${seatNumber} - ${getStatusLabel(seatData?.status || 'unknown', seatNumber)}`}
+        style={isSelected ? { boxShadow: '0 0 0 4px #fbbf24, 0 4px 24px #fbbf24aa' } : {}}
       >
         {seatNumber}
         {seatImage && (
@@ -201,6 +205,18 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             ))}
           </div>
         </div>
+        {/* Optionally show confirm on small screens here */}
+        {showConfirmButton && selectedSeat && (
+          <div className="block md:hidden mt-4">
+            <Button
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold"
+              onClick={onConfirmSelection}
+              disabled={locking}
+            >
+              {locking ? "Locking Seat..." : "Confirm Seat"}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
