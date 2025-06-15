@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SeatIcon from './SeatIcon';
 import { Seat } from '@/hooks/useSeats';
 import { SeatStatus, SeatMapState } from '@/hooks/useSeatMapStatus';
 import SeatStatusLegend from './SeatStatusLegend';
+import BookingDetailsDialog from './BookingDetailsDialog';
 
 // Map out the left and right seat arrangement as per HTML
 const LEFT_LAYOUT = [
@@ -29,7 +30,7 @@ const RIGHT_LAYOUT = [
 
 interface SeatSelectionProps {
   seats: Seat[];
-  seatStatuses: Record<string, SeatStatus>;
+  seatStatuses: Record<string, any>;
   selectedSeatId: string | null;
   onSeatSelect: (seatId: string) => void;
   bookingInProgress: boolean;
@@ -149,6 +150,10 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
     });
   }, [seats, seatStatuses, selectedSeatId]);
 
+  // Step 1: State for dialog open
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+
+  // When a seat is selected, show "Continue" button; button opens dialog for details/confirmation.
   return (
     <div className="w-full flex flex-col items-center">
       {/* Seat status legend above the seat map */}
@@ -231,20 +236,23 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
         </div>
       </div>
 
-      {/* Patch: Confirm button guard for state */}
-      {!bookingInProgress
-        && selectedSeatId
-        && seatStatuses
-        && seatStatuses[selectedSeatId]
-        && seatStatuses[selectedSeatId].state === "available" && (
-          <button
-            className="mt-6 px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold shadow transition-colors text-base"
-            onClick={() => onSeatSelect(selectedSeatId)}
-          >
-            Confirm Booking
-          </button>
-        )
-      }
+      {/* Step 2: Continue Button, only if seat is selected */}
+      {!bookingInProgress && selectedSeatId && seatStatuses && seatStatuses[selectedSeatId]?.state === "available" && (
+        <button
+          className="mt-6 px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold shadow transition-colors text-base"
+          onClick={() => setBookingDialogOpen(true)}
+        >
+          Continue &amp; Enter Details
+        </button>
+      )}
+      {/* Step 3: Dialog for additional details, only opens when dialog state is true */}
+      {bookingDialogOpen && selectedSeatId && (
+        <BookingDetailsDialog
+          seatId={selectedSeatId}
+          onClose={() => setBookingDialogOpen(false)}
+          myUserId={myUserId}
+        />
+      )}
     </div>
   );
 };
