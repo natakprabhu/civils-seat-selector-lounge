@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,11 +8,17 @@ import { toast } from '@/hooks/use-toast';
 import { Phone } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 
+const OTP_RESEND_TIMEOUT = 30; // 30 seconds
+
 const AuthPage: React.FC = () => {
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const { sendOtp, verifyOtp, loading } = useAuth();
+
+  // New state for resend timer
+  const [resendTimer, setResendTimer] = useState(0);
+  const [resendLoading, setResendLoading] = useState(false);
 
   // Diagnostic: Log on every render
   console.log('[AuthPage] render', { mobile, showOtpInput, otp });
@@ -23,6 +30,19 @@ const AuthPage: React.FC = () => {
       console.log('[AuthPage] component unmounted');
     };
   }, []);
+
+  // Countdown effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [resendTimer]);
 
   const validateMobileNumber = (number: string) => {
     // Remove spaces/special chars
@@ -48,9 +68,23 @@ const AuthPage: React.FC = () => {
     }
 
     setShowOtpInput(true);
+    setResendTimer(OTP_RESEND_TIMEOUT);
     // Diagnostic: Confirm we hit this and showOtpInput is set
     console.log('[AuthPage] setShowOtpInput(true) called after OTP send');
     toast({ title: "OTP Sent", description: `OTP sent to ${mobile}` });
+  };
+
+  const handleResendOtp = async () => {
+    if (!mobile) return;
+    setResendLoading(true);
+    const result = await sendOtp(mobile);
+    setResendLoading(false);
+    if (result.error) {
+      toast({ title: "Send OTP Failed", description: result.error, variant: "destructive" });
+      return;
+    }
+    setResendTimer(OTP_RESEND_TIMEOUT);
+    toast({ title: "OTP Resent", description: `A new OTP has been sent to ${mobile}` });
   };
 
   const handleVerifyOtp = async () => {
@@ -129,6 +163,22 @@ const AuthPage: React.FC = () => {
                       </InputOTPGroup>
                     </InputOTP>
                   </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={resendTimer > 0 || resendLoading}
+                      onClick={handleResendOtp}
+                      className="text-cyan-400 px-0 hover:underline"
+                    >
+                      {resendLoading
+                        ? 'Sending...'
+                        : resendTimer > 0
+                          ? `Resend OTP in ${resendTimer}s`
+                          : 'Resend OTP'}
+                    </Button>
+                    <div />
+                  </div>
                 </div>
               )}
               
@@ -136,7 +186,12 @@ const AuthPage: React.FC = () => {
                 type="button"
                 onClick={showOtpInput ? handleVerifyOtp : handleSendOtp}
                 className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-600 hover:to-slate-800 text-white text-lg font-semibold shadow-lg border border-slate-600"
-                disabled={loading || !mobile || !validateMobileNumber(mobile) || (showOtpInput && (otp.length !== 4 && otp.length !== 6))}
+                disabled={
+                  loading ||
+                  !mobile ||
+                  !validateMobileNumber(mobile) ||
+                  (showOtpInput && (otp.length !== 4 && otp.length !== 6))
+                }
               >
                 <Phone className="w-5 h-5 mr-2" />
                 {loading ? 'Processing...' : showOtpInput ? 'Verify OTP' : 'Send OTP'}
