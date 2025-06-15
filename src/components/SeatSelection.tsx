@@ -1,4 +1,3 @@
-
 import React from 'react';
 import SeatIcon from './SeatIcon';
 import { Seat } from '@/hooks/useSeats';
@@ -109,13 +108,6 @@ const SeatItem: React.FC<SeatItemProps> = ({
           disabled={bookingInProgress || status !== "vacant"}
         />
       </div>
-      <span className="text-xs mt-0.5 text-slate-400">
-        {
-          status === 'pending'
-            ? 'On Hold'
-            : status.charAt(0).toUpperCase() + status.slice(1)
-        }
-      </span>
     </div>
   );
 };
