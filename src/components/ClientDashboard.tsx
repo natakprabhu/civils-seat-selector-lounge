@@ -279,6 +279,40 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     }
   };
 
+  // Find current user's latest booking (pending/approved)
+  const myBooking = bookings.find(
+    b => b.user_id === user?.id && (b.status === "pending" || b.status === "approved")
+  );
+
+  // Set up userBooking object for MyBookingDetails:
+  useEffect(() => {
+    if (myBooking) {
+      setUserBooking({
+        seatNumber: myBooking.seat?.seat_number || "",
+        name: profile?.full_name || "User Name",
+        mobile: profile?.mobile || userMobile,
+        email: profile?.email || "",
+        duration: myBooking.duration_months ? `${myBooking.duration_months} Month${myBooking.duration_months > 1 ? "s" : ""}` : "",
+        status: myBooking.status as "not_applied" | "pending" | "approved",
+        submittedAt: myBooking.requested_at
+          ? new Date(myBooking.requested_at).toLocaleString()
+          : "",
+      });
+    }
+    // If no booking, clear details
+    else {
+      setUserBooking({
+        seatNumber: "",
+        name: profile?.full_name || "User Name",
+        mobile: profile?.mobile || userMobile,
+        email: profile?.email || "",
+        duration: "",
+        status: "not_applied",
+        submittedAt: "",
+      });
+    }
+  }, [myBooking, profile, userMobile]);
+
   const handleRequestSeatChange = () => {
     if (hasPendingSeatChange) {
       toast({
