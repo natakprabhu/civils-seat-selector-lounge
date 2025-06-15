@@ -167,7 +167,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     setSelectedSeat(null);
   };
 
-  // Remove shows from booking payload logic
   const handleBookingSubmit = async (details: { name: string; email: string; mobile: string; seatNumber: string; duration: number }) => {
     setFormLoading(true);
     const seat = seats.find(s => s.seat_number === details.seatNumber);
@@ -180,9 +179,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       });
       return;
     }
-    // No show check or payload
+    // Debug: Log user details and session before insert
     console.log("[Booking Submit] user object:", user);
-    console.log("[Booking Submit] user.id:", user.id);
+    console.log("[Booking Submit] user.id for insert:", user.id);
+    console.log("[Booking Submit] Supabase session:", supabase.auth.getSession ? await supabase.auth.getSession() : "N/A");
+    // No show check or payload
     console.log("[Booking Submit] Booking payload:", {
       user_id: user.id,
       seat_id: seat.id,
@@ -231,6 +232,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       });
       // Additional error log for debugging
       console.error("[Booking Submit] Insert error:", error);
+
+      // Extra RLS debug message!
+      if (error.message && error.message.includes("row violates row-level security policy")) {
+        console.error("[Booking Submit][RLS] RLS policy prevented insert. This usually means Supabase sees user_id as missing/incorrect, or you are not authenticated.");
+      }
     }
   };
 
