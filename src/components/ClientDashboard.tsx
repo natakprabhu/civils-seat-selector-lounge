@@ -179,11 +179,28 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       });
       return;
     }
-    // Debug: Log user details and session before insert
+
+    // ----- SESSION DEBUG -----
+    const sessionRes = await supabase.auth.getSession();
+    console.log("[Booking Submit][Debug] supabase.auth.getSession:", sessionRes);
+    const accessToken = sessionRes.data?.session?.access_token;
+    if (accessToken) {
+      console.log("[Booking Submit][Debug] Access token present (partial):", accessToken.slice(0, 24) + '...');
+    } else {
+      console.warn("[Booking Submit][Debug] No access token found, this will break RLS.");
+    }
+
+    // Call a Postgres RPC to confirm what auth.uid() returns for this token
+    const { data: authUidRow, error: authUidError } = await supabase.rpc('fetch_uid', {});
+    if (authUidError) {
+      console.warn("[Booking Submit][Debug] fetch_uid RPC error:", authUidError);
+    } else {
+      console.log("[Booking Submit][Debug] Supabase server-side auth.uid():", authUidRow);
+    }
+
+    // Continue with the booking insert
     console.log("[Booking Submit] user object:", user);
     console.log("[Booking Submit] user.id for insert:", user.id);
-    console.log("[Booking Submit] Supabase session:", supabase.auth.getSession ? await supabase.auth.getSession() : "N/A");
-    // No show check or payload
     console.log("[Booking Submit] Booking payload:", {
       user_id: user.id,
       seat_id: seat.id,
@@ -191,7 +208,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       status: "pending"
     });
 
-    // Only insert fields that exist in seat_bookings now (no show_id)
     const { error } = await supabase.from("seat_bookings").insert({
       user_id: user.id,
       seat_id: seat.id,
@@ -233,7 +249,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       // Additional error log for debugging
       console.error("[Booking Submit] Insert error:", error);
 
-      // Extra RLS debug message!
       if (error.message && error.message.includes("row violates row-level security policy")) {
         console.error("[Booking Submit][RLS] RLS policy prevented insert. This usually means Supabase sees user_id as missing/incorrect, or you are not authenticated.");
       }
