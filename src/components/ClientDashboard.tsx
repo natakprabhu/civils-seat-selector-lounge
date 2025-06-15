@@ -97,7 +97,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const userEmail = user?.email || userMobile;
 
   // NEW: Show list and selected show
-  const [shows, setShows] = React.useState<{ id: string, name?: string }[]>([]);
+  const [shows, setShows] = React.useState<any[]>([]);
   const [showsLoading, setShowsLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -150,11 +150,12 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     };
     fetchBookings();
 
-    // Fetch available shows
+    // Fetch available shows (fix types)
     const fetchShows = async () => {
       setShowsLoading(true);
+      // Use 'any' for type safety due to Supabase codegen mismatch
       const { data, error } = await supabase
-        .from("shows")
+        .from("shows" as any)
         .select("id, name");
       setShowsLoading(false);
       if (data && Array.isArray(data) && data.length > 0) {
@@ -166,7 +167,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     fetchShows();
   }, [user]);
 
-  // Only allow booking if user has no pending/approved booking AND have at least one show
+  // Only allow booking if user has no active (pending/approved) booking AND at least one available show
   const userActiveBooking = bookings.some(
     (b) => (b.user_id === userId) && (b.status === "pending" || b.status === "approved")
   );
@@ -194,7 +195,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       });
       return;
     }
-    // NEW: If no show available, error
+    // If no show, abort
     if (shows.length === 0) {
       setFormLoading(false);
       toast({
@@ -653,7 +654,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               userActiveBooking={userActiveBooking}
               selectedSeat={selectedSeat}
               onSeatSelect={handleSeatSelect}
-              canBook={canBook}
             />
             {/* Confirm Detail Dialog */}
             <BookingDialog
@@ -662,7 +662,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               onSubmit={handleBookingSubmit}
               seatNumber={selectedSeat || ""}
               loading={formLoading}
-              // Pass profile details as new props
               name={profile?.full_name || ""}
               email={profile?.email || ""}
               mobile={profile?.mobile || ""}
