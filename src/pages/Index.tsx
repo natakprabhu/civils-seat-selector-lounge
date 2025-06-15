@@ -8,6 +8,9 @@ import StaffDashboard from "@/components/StaffDashboard";
 const Index = () => {
   const { user, userRole, loading, signIn, signOut } = useAuth();
 
+  // Debug logs for state
+  console.log("INDEX_PAGE_STATE:", { user, userRole, loading });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -42,3 +45,4 @@ const Index = () => {
 };
 
 export default Index;
+
