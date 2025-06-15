@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +6,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { toast } from '@/hooks/use-toast';
 import { Phone } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
+import ProfileSetupModal from './ProfileSetupModal';
 
 const OTP_RESEND_TIMEOUT = 30; // 30 seconds
 
@@ -14,7 +14,7 @@ const AuthPage: React.FC = () => {
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
-  const { sendOtp, verifyOtp, loading } = useAuth();
+  const { sendOtp, verifyOtp, loading, user, userProfile, completeProfile } = useAuth();
 
   // New state for resend timer
   const [resendTimer, setResendTimer] = useState(0);
@@ -110,8 +110,19 @@ const AuthPage: React.FC = () => {
     }
   };
 
+  // Show modal if user is logged in but their profile has missing name or email
+  const needsProfile = !!user && (!!userProfile && (!userProfile.full_name || !userProfile.email));
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 flex items-center justify-center p-4">
+      {/* Show modal only if user needs to complete profile */}
+      {needsProfile && !!user?.mobile && !!completeProfile && (
+        <ProfileSetupModal
+          open={true}
+          initialMobile={user.mobile}
+          onSubmit={async (fullName, email) => await completeProfile(fullName, email)}
+        />
+      )}
       <div className="w-full max-w-md">
         <Card className="shadow-2xl border border-slate-700/50 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-sm">
           <CardHeader className="text-center pb-8 pt-8">

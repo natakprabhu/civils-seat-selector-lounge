@@ -7,6 +7,9 @@ interface AuthContextType {
   sendOtp: (mobile: string) => Promise<{ error: any }>;
   verifyOtp: (mobile: string, otp: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  userProfile?: { full_name?: string; email?: string; mobile?: string } | null;
+  completeProfile?: (fullName: string, email: string) => Promise<{ error: any }>;
+  fetchProfile?: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,6 +19,7 @@ const SUPABASE_FUNCTIONS_BASE = "https://llvujxdmzuyebkzuutqn.functions.supabase
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<{ mobile: string; role?: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ full_name?: string; email?: string; mobile?: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Setup user session listener
@@ -23,8 +27,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser({ mobile: session.user.phone || "", role: undefined });
+
+        // fetch user profile non-blocking
+        setTimeout(() => {
+          fetchProfile();
+        }, 0);
       } else {
         setUser(null);
+        setUserProfile(null);
       }
     });
 
@@ -32,11 +42,72 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser({ mobile: session.user.phone || "", role: undefined });
+        fetchProfile();
       }
     });
 
     return () => subscription.unsubscribe();
+    // eslint-disable-next-line
   }, []);
+
+  const fetchProfile = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setUserProfile(null);
+        setLoading(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, email, mobile')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Failed to fetch user profile", error);
+        setUserProfile(null);
+        setLoading(false);
+        return;
+      }
+      setUserProfile(data);
+    } catch (error) {
+      setUserProfile(null);
+    }
+    setLoading(false);
+  };
+
+  const completeProfile = async (fullName: string, email: string) => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return { error: "User not authenticated." };
+      }
+      // update profile
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: fullName,
+          email: email
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        setLoading(false);
+        return { error: error.message || "Failed to update profile." };
+      }
+      // Refetch the updated profile
+      await fetchProfile();
+      setLoading(false);
+      return { error: null };
+    } catch (error) {
+      setLoading(false);
+      return { error: "Failed to update profile." };
+    }
+  };
 
   const sendOtp = async (mobile: string) => {
     setLoading(true);
@@ -88,6 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setUserProfile(null);
   };
 
   return (
@@ -96,7 +168,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       loading,
       sendOtp,
       verifyOtp,
-      signOut
+      signOut,
+      userProfile,
+      completeProfile,
+      fetchProfile, // expose this as well for manual refresh
     }}>
       {children}
     </AuthContext.Provider>
@@ -104,7 +179,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = useContext(AuthContext) as AuthContextType & {
+    userProfile?: { full_name?: string; email?: string; mobile?: string } | null;
+    completeProfile?: (fullName: string, email: string) => Promise<{ error: any }>;
+    fetchProfile?: () => Promise<void>;
+  };
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
