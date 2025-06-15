@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthContextType {
   user: { mobile: string; role?: string } | null;
@@ -17,73 +18,75 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<{ mobile: string; role?: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // No user session persistence for demo; you could use localStorage if desired
+  // Setup user session listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUser({ mobile: session.user.phone || "", role: undefined });
+      } else {
+        setUser(null);
+      }
+    });
+
+    // Get session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({ mobile: session.user.phone || "", role: undefined });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const sendOtp = async (mobile: string) => {
-    if (mobile === "9999999999") {
-      setLoading(false);
-      return { error: null };
-    }
-
     setLoading(true);
     try {
-      const response = await fetch(`${SUPABASE_FUNCTIONS_BASE}/send-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile }),
+      // Send OTP natively with Supabase
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: mobile.startsWith('+') ? mobile : `+91${mobile}`,
       });
-      // The edge functions always return JSON
-      const res = await response.json();
       setLoading(false);
-
-      if (!response.ok) {
-        // Only log the error, but show generic message to end user
-        console.error("OTP send failed:", res.error || "Unknown error");
+      if (error) {
+        console.error("OTP send failed:", error.message);
         return { error: "Failed to send OTP. Please try again." };
       }
       return { error: null };
     } catch (error) {
       setLoading(false);
-      // Log actual error, generic to user
       console.error("OTP send failed:", error);
       return { error: "Failed to send OTP. Please try again." };
     }
   };
 
   const verifyOtp = async (mobile: string, otp: string) => {
-    // ADMIN BYPASS: allow logging in as admin with 6-digit code 000000
-    if (mobile === "9999999999" && otp === "000000") {
-      setUser({ mobile, role: "admin" });
-      setLoading(false);
-      return { error: null };
-    }
     setLoading(true);
     try {
-      const response = await fetch(`${SUPABASE_FUNCTIONS_BASE}/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile, otp }),
+      // Verify OTP and log in to Supabase
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: mobile.startsWith('+') ? mobile : `+91${mobile}`,
+        token: otp,
+        type: 'sms'
       });
-      const res = await response.json();
       setLoading(false);
 
-      if (res.success) {
-        setUser({ mobile });
-        return { error: null };
-      } else {
+      if (error) {
         // Log actual error; return generic message to user
-        console.error("OTP verification error:", res.error || "Unknown error");
+        console.error("OTP verification error:", error.message);
         return { error: "Verification failed. Please check your details and try again." };
+      } else if (data?.user) {
+        setUser({ mobile: data.user.phone || "" });
+        return { error: null };
       }
+      return { error: "Verification failed. Please check your details and try again." };
     } catch (error) {
       setLoading(false);
-      // Log actual error; return generic message to user
       console.error("OTP verification error:", error);
       return { error: "Verification failed. Please check your details and try again." };
     }
   };
 
   const signOut = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
 
