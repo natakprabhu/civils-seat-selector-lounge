@@ -26,16 +26,39 @@ interface ClientDashboardProps {
   onLogout: () => void;
 }
 
-// Dummy user booking data for UI only
-const DUMMY_BOOKING = {
+// Step 1: Add the right types
+type BookingStatus = 'not_applied' | 'pending' | 'approved';
+type PaymentStatus = 'pending' | 'approved';
+
+// If you have a BookingData interface elsewhere, adjust it similarly
+interface BookingData {
+  seatNumber: string;
+  name: string;
+  mobile: string;
+  email: string;
+  duration: string;
+  status: BookingStatus;
+  submittedAt: string;
+  paymentStatus: PaymentStatus;
+  paidAmount: number;
+  validTill: string;
+  remainingDays: number;
+  startDate: string;
+  planDetails: string;
+  fromTime: string;
+  toTime: string;
+}
+
+// Step 2: Ensure dummy booking uses the correct types
+const DUMMY_BOOKING: BookingData = {
   seatNumber: 'A1',
   name: 'User Name',
   mobile: '9876543210',
   email: 'user@email.com',
   duration: '1 Month',
-  status: 'not_applied' as 'not_applied',
+  status: 'not_applied',
   submittedAt: '',
-  paymentStatus: 'pending' as 'pending',
+  paymentStatus: 'pending',
   paidAmount: 0,
   validTill: '',
   remainingDays: 0,
@@ -51,7 +74,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [profile] = useState<{ full_name?: string; email?: string; mobile?: string } | null>({ full_name: 'User Name', email: 'user@email.com', mobile: '9876543210' });
   const [currentView, setCurrentView] = useState<'dashboard' | 'seat-change' | 'transactions' | 'edit-profile' | 'my-booking' | 'extend-booking' | 'all-transactions' | 'notice-board'>('dashboard');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [userBooking, setUserBooking] = useState(DUMMY_BOOKING);
+  const [userBooking, setUserBooking] = useState<BookingData>(DUMMY_BOOKING);
   const [waitlistPosition] = useState(0);
   const [hasPendingSeatChange] = useState(false);
 
