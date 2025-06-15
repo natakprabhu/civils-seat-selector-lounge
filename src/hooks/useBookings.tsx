@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -33,12 +32,11 @@ export const useBookings = () => {
 
   const fetchBookings = async () => {
     try {
-      // Join profiles and seats tables for richer booking info
+      // Join seats table for richer booking info. Removed profile join to fix error.
       const { data, error } = await supabase
         .from('seat_bookings')
         .select(`
           *,
-          profile:profiles!seat_bookings_user_id_fkey(full_name,email,mobile),
           seat:seats(id,seat_number,section,row_number)
         `)
         .order('requested_at', { ascending: false });
@@ -56,7 +54,7 @@ export const useBookings = () => {
         approved_at: booking.approved_at,
         approved_by: booking.approved_by,
         notes: booking.notes,
-        profile: booking.profile || undefined,
+        profile: undefined, // Profile data is no longer fetched here.
         seat: booking.seat || undefined,
       }));
 

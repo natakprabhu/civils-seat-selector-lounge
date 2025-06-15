@@ -162,6 +162,15 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
     });
   }, [seats, bookings, selectedSeat]);
 
+  if (seats.length === 0) {
+    return (
+      <div className="text-center text-slate-400 py-8">
+        <p className="font-semibold text-lg text-white">No Seats Available</p>
+        <p className="text-sm mt-2">It seems there are no seats configured in the system at the moment. Please check back later or contact support.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full flex flex-col items-center">
       {/* Seat status legend above the seat map */}
