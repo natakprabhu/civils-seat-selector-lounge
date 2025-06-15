@@ -19,37 +19,72 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
 
+  // Helper to actually fetch the true user role from Supabase
+  const fetchUserRoleFromDb = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .order('assigned_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('Error fetching user role:', error);
+      return null;
+    }
+
+    if (data && data.length > 0) {
+      return data[0].role;
+    } else {
+      return null;
+    }
+  };
+
   useEffect(() => {
-    // Set up Supabase auth state listeners and populate state
     setLoading(true);
 
-    // 1. Listen for auth changes and set session/user accordingly
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+
       if (session?.user) {
-        // Try to get userRole from localStorage if present
-        const saved = localStorage.getItem('userSession');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setUserRole(parsed.role || null);
-        }
+        // Fetch actual user role from DB
+        fetchUserRoleFromDb(session.user.id).then((role) => {
+          setUserRole(role || null);
+          // Save to localStorage for convenience, but main source of truth is DB
+          const old = localStorage.getItem('userSession');
+          let obj = { mobile: session.user.phone || '', role, loginTime: new Date().toISOString() };
+          if (old) {
+            try {
+              obj = { ...JSON.parse(old), role };
+            } catch {}
+          }
+          localStorage.setItem('userSession', JSON.stringify(obj));
+        });
       } else {
         setUserRole(null);
       }
       setLoading(false);
     });
 
-    // 2. On mount, check for session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        const saved = localStorage.getItem('userSession');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setUserRole(parsed.role || null);
-        }
+        fetchUserRoleFromDb(session.user.id).then((role) => {
+          setUserRole(role || null);
+          // Save to localStorage for convenience, but main source of truth is DB
+          const old = localStorage.getItem('userSession');
+          let obj = { mobile: session.user.phone || '', role, loginTime: new Date().toISOString() };
+          if (old) {
+            try {
+              obj = { ...JSON.parse(old), role };
+            } catch {}
+          }
+          localStorage.setItem('userSession', JSON.stringify(obj));
+        });
+      } else {
+        setUserRole(null);
       }
       setLoading(false);
     });
@@ -79,30 +114,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             emailRedirectTo: `${window.location.origin}/`,
           }
         });
-        // Ask user to check email if necessary
         if (authResponse.error) throw authResponse.error;
       }
 
       if (authResponse.error) throw authResponse.error;
 
-      // Successful login, update state
-      // { user, session } returned, or may need to fetch with getSession
       let newSession = authResponse.data.session;
       if (!newSession) {
-        // Email confirm required, most likely; show error
         throw new Error("Authentication with Supabase failed. Email confirmation may be required.");
       }
       setSession(newSession);
       setUser(newSession.user);
 
-      // Save mobile/role to localStorage for display/role-picking
+      // Get the actual user role from DB (so manual promotion works)
+      const dbRole = await fetchUserRoleFromDb(newSession.user.id);
+
       const sessionData = {
         mobile,
-        role: userType,
+        role: dbRole || userType,
         loginTime: new Date().toISOString()
       };
       localStorage.setItem('userSession', JSON.stringify(sessionData));
-      setUserRole(userType);
+      setUserRole(dbRole || userType);
       setLoading(false);
 
       return { error: null };
