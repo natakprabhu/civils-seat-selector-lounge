@@ -1,9 +1,10 @@
+
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Mail, Lock, Loader2 } from "lucide-react";
+import { Mail, Lock, Loader2, User, Smartphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type Mode = "login" | "signup" | "forgot";
@@ -13,6 +14,8 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [mobile, setMobile] = useState("");
   const [message, setMessage] = useState("");
   const [errorText, setErrorText] = useState<string | null>(null);
 
@@ -56,6 +59,24 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
 
     setMessage("");
     setErrorText(null);
+
+    // Validate fullName and mobile in signup mode
+    if (mode === "signup") {
+      if (!fullName.trim()) {
+        setErrorText("Full name is required.");
+        return;
+      }
+      if (!mobile.trim()) {
+        setErrorText("Mobile is required.");
+        return;
+      }
+      // Simple mobile number validation (India format, 10 digits)
+      if (!/^[6-9]\d{9}$/.test(mobile.trim())) {
+        setErrorText("Please enter a valid 10-digit mobile number.");
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       if (mode === "signup") {
@@ -63,7 +84,13 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin + "/" },
+          options: {
+            emailRedirectTo: window.location.origin + "/",
+            data: {
+              full_name: fullName.trim(),
+              mobile: mobile.trim(),
+            },
+          },
         });
         handleAuthResult({ error });
         if (!error) {
@@ -97,6 +124,10 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
     setMessage("");
     setPassword("");
     setErrorText(null);
+    if (mode === "signup") {
+      setFullName("");
+      setMobile("");
+    }
   }, [mode]);
 
   return (
@@ -124,6 +155,48 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
               </div>
             )}
             <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === "signup" && (
+                <>
+                  <div>
+                    <label className="text-sm text-slate-300 font-medium">
+                      Full Name <span className="text-red-400">*</span>
+                    </label>
+                    <div className="mt-1 relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <Input
+                        type="text"
+                        className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
+                        placeholder="Enter your full name"
+                        value={fullName}
+                        onChange={e => setFullName(e.target.value)}
+                        autoComplete="name"
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-300 font-medium">
+                      Mobile <span className="text-red-400">*</span>
+                    </label>
+                    <div className="mt-1 relative">
+                      <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <Input
+                        type="tel"
+                        className="pl-10 h-12 text-base bg-slate-800 border-slate-600 text-white"
+                        placeholder="Enter your 10-digit mobile number"
+                        value={mobile}
+                        onChange={e => setMobile(e.target.value)}
+                        autoComplete="tel"
+                        required
+                        pattern="[6-9]{1}[0-9]{9}"
+                        disabled={loading}
+                        maxLength={10}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
               <div>
                 <label className="text-sm text-slate-300 font-medium">
                   Email
@@ -173,7 +246,8 @@ const EmailAuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
                 disabled={
                   loading ||
                   !email ||
-                  (mode !== "forgot" && !password)
+                  (mode !== "forgot" && !password) ||
+                  (mode === "signup" && (!fullName || !mobile))
                 }
               >
                 {loading && <Loader2 className="animate-spin mr-2" />}
