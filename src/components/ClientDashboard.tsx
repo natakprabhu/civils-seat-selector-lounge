@@ -107,7 +107,16 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           .single();
         if (data) {
           setProfile(data);
+          console.log("[Profile Fetch] user.id:", user.id);
+          console.log("[Profile Fetch] Full profile data:", data);
+        } else {
+          console.warn("[Profile Fetch] No profile data for user.id:", user.id);
         }
+        if (error) {
+          console.error("[Profile Fetch] Error:", error);
+        }
+      } else {
+        console.warn("[Profile Fetch] No user.id found, cannot fetch profile");
       }
     };
     fetchProfile();
@@ -165,7 +174,17 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       });
       return;
     }
-    // Insert using the authenticated user's id to comply with RLS policy
+    // Log user and booking payload for debugging RLS errors
+    console.log("[Booking Submit] user object:", user);
+    console.log("[Booking Submit] user.id:", user.id);
+    console.log("[Booking Submit] Booking payload:", {
+      user_id: user.id,
+      seat_id: seat.id,
+      show_id: TEST_SHOW_UUID,
+      duration_months: details.duration,
+      status: "pending"
+    });
+
     const { error } = await supabase.from("seat_bookings").insert({
       user_id: user.id,
       seat_id: seat.id,
@@ -206,6 +225,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         description: error.message || 'Failed to request booking.',
         variant: 'destructive'
       });
+      // Additional error log for debugging
+      console.error("[Booking Submit] Insert error:", error);
     }
   };
 
