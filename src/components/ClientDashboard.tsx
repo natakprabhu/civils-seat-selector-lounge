@@ -484,11 +484,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     }
   };
 
-  // Countdown timer hook per booking/request
-  const useBookingTimer = (requestedAt: string) => {
-    const [timeLeft, setTimeLeft] = useState<number>(0);
+  // Booking timer mini-component
+  const BookingTimer: React.FC<{ requestedAt: string, label?: string }> = ({ requestedAt, label = "min left before fresh booking" }) => {
+    const [timeLeft, setTimeLeft] = React.useState<number>(0);
 
-    useEffect(() => {
+    React.useEffect(() => {
       if (!requestedAt) return;
       const requested = new Date(requestedAt).getTime();
       const expiresAt = requested + 60 * 60 * 1000; // 1 hour after requested
@@ -500,11 +500,16 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       const interval = setInterval(tick, 1000);
       return () => clearInterval(interval);
     }, [requestedAt]);
-    return timeLeft;
-  };
 
-  // Prepare all timer values once, indexed the same as transactions, so hooks are called in same order each render
-  const bookingTimers = userTransactions.map(txn => useBookingTimer(txn.requestedAt));
+    const mins = Math.floor(timeLeft / 60);
+    const secs = timeLeft % 60;
+    if (timeLeft <= 0) return null;
+    return (
+      <span className="px-3 py-1 bg-yellow-700 text-yellow-100 font-mono text-xs rounded">
+        {mins}:{secs.toString().padStart(2, '0')} {label}
+      </span>
+    );
+  };
 
   if (currentView === 'seat-change') {
     return (
@@ -865,11 +870,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             ) : (
               <div className="divide-y divide-slate-800">
                 {userTransactions.map((txn, idx) => {
-                  // Always use the timer from the array so hooks are called in a static order
-                  const timeLeft = bookingTimers[idx] || 0;
                   const showTimer = txn.status === "pending" && txn.requestedAt;
-                  const mins = Math.floor(timeLeft / 60);
-                  const secs = timeLeft % 60;
 
                   return (
                     <div key={txn.id} className="py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -911,13 +912,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
                           {txn.totalAmount ? txn.totalAmount : 0}
                         </span>
                         {/* Countdown Timer for pending bookings */}
-                        {showTimer && timeLeft > 0 && (
-                          <span className="px-3 py-1 bg-yellow-700 text-yellow-100 font-mono text-xs rounded">
-                            {mins}:{secs.toString().padStart(2, '0')} min left before fresh booking
-                          </span>
+                        {showTimer && (
+                          <BookingTimer requestedAt={txn.requestedAt} />
                         )}
                         {/* Cancel Booking Button for pending bookings in time */}
-                        {txn.type === "New Booking" && txn.status === "pending" && timeLeft > 0 && (
+                        {txn.type === "New Booking" && txn.status === "pending" && showTimer && (
                           <AlertDialog open={showCancelDialog && transactionToCancel === txn.id} onOpenChange={(open) => {
                             setShowCancelDialog(open);
                             if (!open) setTransactionToCancel(null);
