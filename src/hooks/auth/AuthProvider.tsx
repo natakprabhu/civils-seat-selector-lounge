@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { randomPassword, SUPABASE_FUNCTIONS_BASE } from "./helpers";
@@ -104,74 +103,72 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Send OTP
+  // Send OTP: always use signInWithOtp, try login flow first
   const sendOtp = async (mobile: string) => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${SUPABASE_FUNCTIONS_BASE}/send-otp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mobile })
+      const phone = mobile.startsWith('+') ? mobile : `+91${mobile}`;
+      let result = await supabase.auth.signInWithOtp({ phone, options: { shouldCreateUser: false } });
+
+      // If user doesn't exist, try registration mode
+      if (
+        result.error && 
+        result.error.message && 
+        result.error.message.toLowerCase().includes("signups not allowed for otp") // message from supabase
+      ) {
+        // This means user does not exist; try to create
+        result = await supabase.auth.signInWithOtp({ phone, options: { shouldCreateUser: true } });
+        if (result.error) {
+          setLoading(false);
+          return { error: result.error.message || "Unable to send OTP. Please try again." };
         }
-      );
-      const data = await response.json();
-      setLoading(false);
-      if (!response.ok) {
-        console.error("OTP send failed:", data.error);
-        return { error: data.error || "Failed to send OTP. Please try again." };
       }
+      // If error but not "signups not allowed", report it
+      if (result.error) {
+        setLoading(false);
+        return { error: result.error.message || "Unable to send OTP. Please try again." };
+      }
+      setLoading(false);
       return { error: null };
     } catch (error: any) {
       setLoading(false);
-      console.error("OTP send failed:", error);
       return { error: "Failed to send OTP. Please try again." };
     }
   };
 
-  // Verify OTP
+  // Verify OTP: always use supabase.auth.verifyOtp
   const verifyOtp = async (mobile: string, otp: string) => {
     setLoading(true);
     try {
-      // Step 1: Verify with Twilio
-      const response = await fetch(
-        `${SUPABASE_FUNCTIONS_BASE}/verify-otp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mobile, otp })
-        }
-      );
-      const data = await response.json();
-      if (!response.ok || !data.success) {
+      const phone = mobile.startsWith('+') ? mobile : `+91${mobile}`;
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone,
+        token: otp,
+        type: 'sms'
+      });
+
+      if (error) {
         setLoading(false);
-        const errMsg = data?.error || "Verification failed. Please check your details and try again.";
-        console.error("Twilio OTP verification failed", errMsg);
+        let errMsg = "Verification failed. Please check your details and try again.";
+        if (error.message && error.message.toLowerCase().includes("invalid or expired otp")) {
+          errMsg = "Invalid or expired OTP. Please resend and try again.";
+        }
         return { error: errMsg };
       }
 
-      // Step 2: Ensure Supabase Auth user exists
-      const phone = mobile.startsWith('+') ? mobile : `+91${mobile}`;
-      let getUserRes = await supabase.auth.signInWithOtp({ phone, options: { shouldCreateUser: false } });
-
-      if (getUserRes.error && getUserRes.error.message?.toLowerCase().includes('user not found')) {
-        const password = randomPassword();
-        await supabase.auth.signUp({ phone, password });
-        getUserRes = await supabase.auth.signInWithOtp({ phone, options: { shouldCreateUser: false } });
+      // Handle session
+      if (data?.session && data.session.user) {
+        setUser({ mobile: data.session.user.phone || "", role: undefined });
+        setTimeout(fetchProfile, 0); // fetch profile after login
+      } else {
+        setUser(null);
+        setUserProfile(null);
       }
 
-      if (getUserRes.error) {
-        setLoading(false);
-        return { error: getUserRes.error.message || "Supabase user creation failed." };
-      }
-
-      setUser({ mobile, role: undefined });
       setLoading(false);
       return { error: null };
     } catch (error: any) {
       setLoading(false);
-      console.error("verifyOtp error:", error);
       return { error: "Verification failed. Please check your details and try again." };
     }
   };
@@ -198,3 +195,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     </AuthContext.Provider>
   );
 };
+
+/*
+ * To store custom session info or extend phone info separately from Supabase Auth,
+ * add this table via SQL (sessions are automatically handled by Supabase Auth):
+ *
+ * CREATE TABLE public.phone_sessions (
+ *   id uuid primary key default gen_random_uuid(),
+ *   user_id uuid references auth.users not null,
+ *   phone text not null,
+ *   created_at timestamptz default now()
+ * );
+ *
+ * But for most use-cases, the built-in Supabase Auth stores secure session tokens and phone mapping.
+ */
