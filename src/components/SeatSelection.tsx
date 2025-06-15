@@ -1,10 +1,9 @@
-
 import React from 'react';
 import SeatIcon from './SeatIcon';
 import { Seat } from '@/hooks/useSeats';
 import { BookingRequest } from '@/hooks/useBookings';
 
-// Map out the left and right seat arrangement as per HTML
+// Left and Right Layouts matching the floor plan
 const LEFT_LAYOUT = [
   ['A1', 'A2'],
   ['B1', 'B2', 'B3', 'B4'],
@@ -45,6 +44,8 @@ const getSeatByNumber = (seats: Seat[]) => {
   return map;
 };
 
+const NUM_AISLE_LABELS = 5;
+
 const SeatSelection: React.FC<SeatSelectionProps> = ({
   seats,
   selectedSeat,
@@ -83,9 +84,10 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   // Aisle label styling using tailwind: rotate, vertical writing, faded
   // Stairs and Washroom boxes
   return (
-    <div className="w-full flex justify-center items-stretch mt-2 gap-4 flex-wrap">
+    <div className="w-full flex justify-center items-stretch mt-2 gap-4 flex-wrap relative min-h-[70vh]">
       {/* Left block */}
-      <div className="flex flex-col items-end">
+      <div className="flex flex-col items-end relative min-h-[70vh]">
+        {/* Seat rows */}
         {LEFT_LAYOUT.map((row, i) => (
           <div key={i} className="flex flex-row mb-1">
             {row.map((seatNum) => {
@@ -117,34 +119,45 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             })}
           </div>
         ))}
-        {/* Stairs and Washroom at bottom */}
-        <div className="flex flex-row mt-2 w-full">
-          <div className="flex-1 flex items-center justify-center m-1">
-            <div className="w-full h-16 bg-gradient-to-t from-slate-400 to-slate-100 border rounded text-sm font-bold flex items-center justify-center shadow box-border">
+        {/* Stairs and Washroom, stretch to bottom */}
+        <div className="flex w-full absolute left-0 right-0 bottom-0 mt-2 pointer-events-none" style={{height: "calc(100% - 15rem)"}}>
+          <div className="flex-1 flex justify-end items-end h-full">
+            <div className="w-full h-full bg-gradient-to-t from-slate-400 to-slate-100 border rounded text-sm font-bold flex items-center justify-center shadow box-border pointer-events-auto min-h-[110px]">
               Stairs
             </div>
           </div>
-          <div className="flex-1 flex items-center justify-center m-1">
-            <div className="w-full h-16 bg-slate-200 border rounded text-sm font-bold flex items-center justify-center shadow box-border">
+          <div className="flex-1 flex items-end h-full">
+            <div className="w-full h-full bg-slate-200 border rounded text-sm font-bold flex items-center justify-center shadow box-border pointer-events-auto min-h-[110px]">
               Washroom
             </div>
           </div>
         </div>
       </div>
-      {/* Aisle */}
-      <div className="relative flex flex-col mx-2">
-        <div className="flex-1" />
-        <div className="w-12 flex items-center justify-center">
-          <span className="writing-vertical font-bold text-slate-400 text-base"
-            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>
-            Aisle
-          </span>
+      {/* Aisle/passage with multiple labels */}
+      <div className="relative flex flex-col items-center mx-2 flex-grow h-full min-h-[70vh]">
+        <div className="absolute inset-x-0 top-0 bottom-0 flex flex-col justify-between items-center z-0">
+          {Array.from({ length: NUM_AISLE_LABELS }).map((_, idx) => (
+            <div key={idx} className="w-full flex justify-center items-center my-2">
+              <span
+                className="font-bold text-slate-400 text-base whitespace-nowrap"
+                style={{
+                  writingMode: "vertical-rl",
+                  transform: "rotate(180deg)"
+                }}
+              >
+                Aisle
+              </span>
+            </div>
+          ))}
+          {/* Passage side lines */}
+          <div className="absolute inset-y-0 left-1 w-0.5 bg-gray-300 rounded z-[-1]" />
+          <div className="absolute inset-y-0 right-1 w-0.5 bg-gray-300 rounded z-[-1]" />
         </div>
-        <div className="absolute inset-y-0 left-1 w-0.5 bg-gray-300 rounded" />
-        <div className="absolute inset-y-0 right-1 w-0.5 bg-gray-300 rounded" />
+        {/* Invisible block for alignment/space */}
+        <div className="flex-1" />
       </div>
       {/* Right block */}
-      <div className="flex flex-col items-start">
+      <div className="flex flex-col items-start min-h-[70vh]">
         {RIGHT_LAYOUT.map((row, i) => (
           <div key={i} className="flex flex-row mb-1">
             {row.map((seatNum) => {
