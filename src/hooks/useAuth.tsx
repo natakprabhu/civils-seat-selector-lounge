@@ -20,7 +20,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // No user session persistence for demo; you could use localStorage if desired
 
   const sendOtp = async (mobile: string) => {
-    // Bypass for admin - don't actually send OTP
     if (mobile === "9999999999") {
       setLoading(false);
       return { error: null };
@@ -38,13 +37,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
 
       if (!response.ok) {
-        console.error(res.error || "Failed to send OTP");
-        return { error: res.error || "Failed to send OTP" };
+        // Only log the error, but show generic message to end user
+        console.error("OTP send failed:", res.error || "Unknown error");
+        return { error: "Failed to send OTP. Please try again." };
       }
       return { error: null };
     } catch (error) {
       setLoading(false);
-      return { error: error?.toString() || "Unknown error" };
+      // Log actual error, generic to user
+      console.error("OTP send failed:", error);
+      return { error: "Failed to send OTP. Please try again." };
     }
   };
 
@@ -69,11 +71,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser({ mobile });
         return { error: null };
       } else {
-        return { error: res.error || "Invalid OTP" };
+        // Log actual error; return generic message to user
+        console.error("OTP verification error:", res.error || "Unknown error");
+        return { error: "Verification failed. Please check your details and try again." };
       }
     } catch (error) {
       setLoading(false);
-      return { error: error?.toString() || "Unknown error" };
+      // Log actual error; return generic message to user
+      console.error("OTP verification error:", error);
+      return { error: "Verification failed. Please check your details and try again." };
     }
   };
 
