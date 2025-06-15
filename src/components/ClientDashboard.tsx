@@ -19,18 +19,14 @@ import ExtendBooking from './ExtendBooking';
 import SeatChangeRequest from './SeatChangeRequest';
 import TransactionHistory from './TransactionHistory';
 
-// All booking/seat change logic removed, UI only. Dummy data everywhere.
-
 interface ClientDashboardProps {
   userMobile: string;
   onLogout: () => void;
 }
 
-// Step 1: Add the right types
 type BookingStatus = 'not_applied' | 'pending' | 'approved';
 type PaymentStatus = 'pending' | 'approved';
 
-// If you have a BookingData interface elsewhere, adjust it similarly
 interface BookingData {
   seatNumber: string;
   name: string;
@@ -49,7 +45,6 @@ interface BookingData {
   toTime: string;
 }
 
-// Step 2: Ensure dummy booking uses the correct types
 const DUMMY_BOOKING: BookingData = {
   seatNumber: 'A1',
   name: 'User Name',
@@ -72,9 +67,6 @@ import { supabase } from "@/integrations/supabase/client";
 import BookingDialog from './BookingDialog';
 import { toast } from '@/hooks/use-toast';
 
-// 👇 Add your test show UUID here. Replace with an actual UUID from your shows table.
-const TEST_SHOW_UUID = '00000000-0000-0000-0000-000000000000'; // <-- Replace this with a real show uuid!
-
 const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout }) => {
   const { user } = useAuth();
   const { seats, loading: seatsLoading } = useSeats();
@@ -85,19 +77,16 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [waitlistPosition] = useState(0);
   const [hasPendingSeatChange] = useState(false);
 
-  // NEW
   const [bookings, setBookings] = React.useState<{ seat_id: string, status: "pending" | "approved", user_id: string }[]>([]);
   const [bookingsLoading, setBookingsLoading] = React.useState(true);
   const [selectedSeat, setSelectedSeat] = React.useState<string | null>(null);
   const [showDialog, setShowDialog] = React.useState(false);
   const [formLoading, setFormLoading] = React.useState(false);
 
-  // Assume `user` contains user id or email to identify current user for bookings
   const userId = user?.id;
   const userEmail = user?.email || userMobile;
 
   React.useEffect(() => {
-    // Fetch user profile from Supabase when the user is present
     const fetchProfile = async () => {
       if (user?.id) {
         const { data, error } = await supabase
@@ -121,7 +110,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     };
     fetchProfile();
 
-    // Fetch all seat bookings for status pending/approved
     const fetchBookings = async () => {
       setBookingsLoading(true);
       const { data, error } = await supabase
@@ -130,7 +118,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         .in("status", ["pending", "approved"]);
       setBookingsLoading(false);
       if (data) {
-        // Cast and filter so status is strictly "pending" | "approved"
         const filtered = data.filter(
           (b: any) => b.status === "pending" || b.status === "approved"
         ).map(
@@ -143,23 +130,30 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       } else {
         setBookings([]);
       }
+      if (error) {
+        console.error("[Fetch Bookings] Error:", error);
+      }
     };
     fetchBookings();
-
-    // Show logic removed
-    // No fetchShows
   }, [user]);
 
-  // Update: Remove shows check from booking restriction
+  // Check if user has any active booking (pending or approved)
   const userActiveBooking = bookings.some(
     (b) => (b.user_id === userId) && (b.status === "pending" || b.status === "approved")
   );
-  // Remove shows length check
-  const canBook = !userActiveBooking;
 
   const handleSeatSelect = (seat: string) => {
-    setSelectedSeat(seat);
-    setShowDialog(true);
+    // Only allow seat selection if user doesn't have an active booking
+    if (!userActiveBooking) {
+      setSelectedSeat(seat);
+      setShowDialog(true);
+    } else {
+      toast({
+        title: 'Booking Restriction',
+        description: 'You already have an active booking. Please wait for it to be processed or contact admin.',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleDialogClose = () => {
@@ -180,26 +174,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       return;
     }
 
-    // ----- SESSION DEBUG -----
-    const sessionRes = await supabase.auth.getSession();
-    console.log("[Booking Submit][Debug] supabase.auth.getSession:", sessionRes);
-    const accessToken = sessionRes.data?.session?.access_token;
-    if (accessToken) {
-      console.log("[Booking Submit][Debug] Access token present (partial):", accessToken.slice(0, 24) + '...');
-    } else {
-      console.warn("[Booking Submit][Debug] No access token found, this will break RLS.");
-    }
-
-    // Call a Postgres RPC to confirm what auth.uid() returns for this token
-    // @ts-expect-error: fetch_uid is a custom Supabase function that isn't typed yet
-    const { data: authUidRow, error: authUidError } = await supabase.rpc('fetch_uid', {});
-    if (authUidError) {
-      console.warn("[Booking Submit][Debug] fetch_uid RPC error:", authUidError);
-    } else {
-      console.log("[Booking Submit][Debug] Supabase server-side auth.uid():", authUidRow);
-    }
-
-    // Continue with the booking insert
     console.log("[Booking Submit] user object:", user);
     console.log("[Booking Submit] user.id for insert:", user.id);
     console.log("[Booking Submit] Booking payload:", {
@@ -215,9 +189,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       duration_months: details.duration,
       status: "pending"
     });
+    
     setFormLoading(false);
     if (!error) {
-      // Refresh bookings
+      // Refresh bookings to update the seat map
       const { data: newBookings } = await supabase
         .from("seat_bookings")
         .select("seat_id, status, user_id")
@@ -238,7 +213,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       setSelectedSeat(null);
       toast({
         title: 'Booking Requested',
-        description: 'Your booking has been logged and is now pending approval.',
+        description: 'Your booking has been logged and is now pending approval. The seat will appear as pending (yellow) on the map.',
         variant: 'default'
       });
     } else {
@@ -247,12 +222,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         description: error.message || 'Failed to request booking.',
         variant: 'destructive'
       });
-      // Additional error log for debugging
       console.error("[Booking Submit] Insert error:", error);
-
-      if (error.message && error.message.includes("row violates row-level security policy")) {
-        console.error("[Booking Submit][RLS] RLS policy prevented insert. This usually means Supabase sees user_id as missing/incorrect, or you are not authenticated.");
-      }
     }
   };
 
@@ -436,21 +406,23 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
           </div>
         </div>
       </div>
+      
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-        {/* Waitlist */}
-        {waitlistPosition > 0 && userBooking.status !== 'approved' && (
+        {/* Show restriction message if user has active booking */}
+        {userActiveBooking && (
           <Card className="dashboard-card border-orange-500/50">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <AlertCircle className="w-5 h-5 text-orange-400" />
                 <div>
-                  <p className="font-semibold text-white">Waitlist Position</p>
-                  <p className="text-sm text-slate-400">You are #{waitlistPosition} in the waitlist for seat allocation</p>
+                  <p className="font-semibold text-white">Booking Restriction</p>
+                  <p className="text-sm text-slate-400">You have an active booking request. You cannot make another booking until this one is processed.</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
+
         {/* Section 1: Stats Cards */}
         <div className="grid md:grid-cols-3 gap-4">
           <Card className="stat-card">
@@ -647,8 +619,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
               userActiveBooking={userActiveBooking}
               selectedSeat={selectedSeat}
               onSeatSelect={handleSeatSelect}
+              currentUserId={userId}
             />
-            {/* Confirm Detail Dialog */}
             <BookingDialog
               open={showDialog}
               onClose={handleDialogClose}

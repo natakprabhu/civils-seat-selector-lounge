@@ -1,18 +1,19 @@
-// Updated SeatSelection to support live bookings, select available seat, and callback to open dialog.
+
 import React, { useMemo } from "react";
 import SeatIcon from "./SeatIcon";
 import { Seat } from "@/hooks/useSeats";
 import SeatStatusLegend from "./SeatStatusLegend";
 
 type BookingStatus = "approved" | "pending";
-type SeatMap = Record<string, { status: BookingStatus; seatId: string }>;
+type SeatMap = Record<string, { status: BookingStatus; seatId: string; userId: string }>;
 
 interface SeatSelectionProps {
   seats: Seat[];
-  bookings: { seat_id: string; status: BookingStatus }[];
+  bookings: { seat_id: string; status: BookingStatus; user_id: string }[];
   userActiveBooking: boolean;
   onSeatSelect: (seatNumber: string) => void;
   selectedSeat: string | null;
+  currentUserId?: string;
 }
 
 const LEFT_LAYOUT = [
@@ -39,11 +40,19 @@ const RIGHT_LAYOUT = [
 const getSeatStatus = (
   seatNumber: string,
   bookingsMap: SeatMap,
-  selectedSeat: string | null
+  selectedSeat: string | null,
+  currentUserId?: string
 ): "booked" | "pending" | "vacant" | "selected" => {
   if (selectedSeat === seatNumber) return "selected";
-  if (bookingsMap[seatNumber]?.status === "approved") return "booked";
-  if (bookingsMap[seatNumber]?.status === "pending") return "pending";
+  
+  const booking = bookingsMap[seatNumber];
+  if (!booking) return "vacant";
+  
+  // Show as pending (yellow) if status is pending
+  if (booking.status === "pending") return "pending";
+  // Show as booked (red) if status is approved
+  if (booking.status === "approved") return "booked";
+  
   return "vacant";
 };
 
@@ -73,14 +82,17 @@ const SeatItem: React.FC<{
       <div className="w-10 h-10 m-1 rounded bg-gray-200 opacity-70" key={seatLabel} />
     );
   }
+
+  const canClick = status === "vacant" && !disabled && onClick;
+
   return (
     <div className="m-1 flex flex-col items-center" key={seatLabel}>
       <div>
         <SeatIcon
           seatNumber={seat.seat_number}
           status={status}
-          disabled={disabled || status !== "vacant"}
-          onClick={status === "vacant" && !disabled ? onClick : undefined}
+          disabled={disabled || !canClick}
+          onClick={canClick ? onClick : undefined}
         />
       </div>
     </div>
@@ -92,7 +104,8 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
   bookings,
   userActiveBooking,
   onSeatSelect,
-  selectedSeat
+  selectedSeat,
+  currentUserId
 }) => {
   const seatsByNumber = useMemo(() => getSeatByNumber(seats), [seats]);
   const bookingsMap: SeatMap = useMemo(() => {
@@ -100,11 +113,22 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
     bookings.forEach(b => {
       const seat = seats.find(s => s.id === b.seat_id);
       if (seat) {
-        map[seat.seat_number] = { status: b.status, seatId: seat.id };
+        map[seat.seat_number] = { 
+          status: b.status, 
+          seatId: seat.id,
+          userId: b.user_id 
+        };
       }
     });
     return map;
   }, [bookings, seats]);
+
+  const handleSeatClick = (seatNumber: string) => {
+    // Only allow seat selection if user doesn't have an active booking
+    if (!userActiveBooking) {
+      onSeatSelect(seatNumber);
+    }
+  };
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -116,19 +140,15 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             <div key={i} className="flex flex-row mb-1">
               {row.map(seatNum => {
                 const seat = seatsByNumber[seatNum];
-                const status = getSeatStatus(seatNum, bookingsMap, selectedSeat);
+                const status = getSeatStatus(seatNum, bookingsMap, selectedSeat, currentUserId);
                 return (
                   <SeatItem
                     key={seatNum}
                     seat={seat}
                     status={status}
                     seatLabel={seatNum}
-                    onClick={() =>
-                      !userActiveBooking &&
-                      status === "vacant" &&
-                      onSeatSelect(seatNum)
-                    }
-                    disabled={!!userActiveBooking}
+                    onClick={() => handleSeatClick(seatNum)}
+                    disabled={userActiveBooking}
                   />
                 );
               })}
@@ -171,19 +191,15 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
             <div key={i} className="flex flex-row mb-1">
               {row.map(seatNum => {
                 const seat = seatsByNumber[seatNum];
-                const status = getSeatStatus(seatNum, bookingsMap, selectedSeat);
+                const status = getSeatStatus(seatNum, bookingsMap, selectedSeat, currentUserId);
                 return (
                   <SeatItem
                     key={seatNum}
                     seat={seat}
                     status={status}
                     seatLabel={seatNum}
-                    onClick={() =>
-                      !userActiveBooking &&
-                      status === "vacant" &&
-                      onSeatSelect(seatNum)
-                    }
-                    disabled={!!userActiveBooking}
+                    onClick={() => handleSeatClick(seatNum)}
+                    disabled={userActiveBooking}
                   />
                 );
               })}
