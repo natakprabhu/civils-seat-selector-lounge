@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,7 +25,7 @@ export function useEnhancedAuth() {
     setLoading(true);
     refreshUser();
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_evt, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_evt, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -39,3 +40,4 @@ export function useEnhancedAuth() {
 
   return { user, session, loading, isEmailConfirmed, isPhoneVerified, refreshUser };
 }
+
