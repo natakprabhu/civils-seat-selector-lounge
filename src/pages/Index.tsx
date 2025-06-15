@@ -1,12 +1,12 @@
 
 import { useAuth } from "@/hooks/useAuth";
-import AuthPage from "@/components/AuthPage";
+import EmailAuthPage from "@/components/EmailAuthPage";
 import ClientDashboard from "@/components/ClientDashboard";
 import AdminDashboard from "@/components/AdminDashboard";
 import StaffDashboard from "@/components/StaffDashboard";
 
 const Index = () => {
-  const { user, userRole, loading, signIn, signOut } = useAuth();
+  const { user, userRole, loading, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -17,7 +17,8 @@ const Index = () => {
   }
 
   if (!user) {
-    return <AuthPage onLogin={signIn} />;
+    // Pass onAuth callback for reloading user state
+    return <EmailAuthPage onAuth={() => window.location.reload()} />;
   }
 
   const handleLogout = async () => {
@@ -34,7 +35,7 @@ const Index = () => {
     default:
       return (
         <ClientDashboard 
-          userMobile={user.phone || user.user_metadata?.mobile || ''} 
+          userMobile={user.email || user.user_metadata?.email || ''} 
           onLogout={handleLogout} 
         />
       );

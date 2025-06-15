@@ -1,16 +1,32 @@
-
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthContextType {
   user: any | null;
   session: any | null;
   loading: boolean;
-  signIn: (mobile: string, userType: 'client' | 'admin' | 'staff') => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   userRole: string | null;
+  signUp: (email: string, password: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Add helper to get role from profiles or user_roles table if needed
+async function fetchUserRole(userId: string): Promise<string | null> {
+  // Try to load from user_roles if available, fallback to 'client'
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!error && data?.role) {
+    return data.role;
+  }
+  return "client";
+}
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any | null>(null);
@@ -19,72 +35,76 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check for existing session in localStorage
-    const checkSession = () => {
-      try {
-        const sessionData = localStorage.getItem('userSession');
-        if (sessionData) {
-          const parsedSession = JSON.parse(sessionData);
-          const mockUser = {
-            phone: parsedSession.mobile,
-            user_metadata: { mobile: parsedSession.mobile }
-          };
-          setUser(mockUser);
-          setSession(parsedSession);
-          setUserRole(parsedSession.role);
-        }
-      } catch (error) {
-        console.error('Error parsing session:', error);
-        localStorage.removeItem('userSession');
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Listen to Supabase auth changes
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
 
-    checkSession();
+      if (session?.user?.id) {
+        fetchUserRole(session.user.id)
+          .then(role => setUserRole(role))
+          .catch(() => setUserRole("client"));
+      } else {
+        setUserRole(null);
+      }
+      setLoading(false);
+    });
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user?.id) {
+        fetchUserRole(session.user.id)
+          .then(role => setUserRole(role))
+          .catch(() => setUserRole("client"));
+      } else {
+        setUserRole(null);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      listener?.subscription?.unsubscribe?.();
+    };
   }, []);
 
-  const signIn = async (mobile: string, userType: 'client' | 'admin' | 'staff') => {
-    try {
-      const sessionData = {
-        mobile,
-        role: userType,
-        loginTime: new Date().toISOString()
-      };
-      
-      localStorage.setItem('userSession', JSON.stringify(sessionData));
-      
-      const mockUser = {
-        phone: mobile,
-        user_metadata: { mobile }
-      };
-      
-      setUser(mockUser);
-      setSession(sessionData);
-      setUserRole(userType);
-      
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
+  // Auth functions for new system
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error };
+  };
+
+  const signUp = async (email: string, password: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: redirectUrl },
+    });
+    return { error };
   };
 
   const signOut = async () => {
-    localStorage.removeItem('userSession');
+    await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setUserRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      session,
-      loading,
-      signIn,
-      signOut,
-      userRole
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        signIn,
+        signOut,
+        userRole,
+        signUp
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
