@@ -71,7 +71,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   
   // Use real Supabase data
   const { seats, loading: seatsLoading, lockSeat } = useSeats();
-  const { createBooking } = useBookings();
+  const { createBooking, bookings } = useBookings();
   
   const [waitlistPosition] = useState(0);
   const [hasPendingSeatChange, setHasPendingSeatChange] = useState(false);
@@ -102,6 +102,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     seatId: ''
   });
 
+  // Check if user has active/pending booking
+  const hasActiveOrPendingBooking =
+    userBooking.status === "approved" ||
+    userBooking.status === "pending";
+
   // Calculate seat statistics using real data
   const totalSeats = seats.length;
   const availableSeats = seats.filter(s => s.status === 'vacant').length;
@@ -111,18 +116,31 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [locking, setLocking] = useState(false);
 
   const handleSeatClick = async (seatId: string) => {
-    const seat = seats.find(s => s.id === seatId);
-    if (!seat || seat.status !== 'vacant') {
+    if (hasActiveOrPendingBooking) {
+      toast({
+        title: "One Booking Allowed",
+        description:
+          "You already have an active or pending seat booking. Please contact admin to approve/cancel or cancel your request from 'My Booking' section.",
+        variant: "destructive",
+        action: {
+          label: "Go to My Booking",
+          onClick: () => setCurrentView("my-booking")
+        }
+      });
+      return;
+    }
+
+    const seat = seats.find((s) => s.id === seatId);
+    if (!seat || seat.status !== "vacant") {
       toast({
         title: "Seat Unavailable",
         description: "This seat is not available for booking.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     setLocking(true);
-    // Attempt to lock the seat
     const { error } = await lockSeat(seatId);
     setLocking(false);
 
@@ -130,7 +148,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       toast({
         title: "Error Locking Seat",
         description: error.message || "Failed to place a lock. Try another seat.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -138,7 +156,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     setSelectedSeatId(seatId);
     setBookingFormData({
       ...bookingFormData,
-      seatId: seatId
+      seatId: seatId,
     });
   };
 
