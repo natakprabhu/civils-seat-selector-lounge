@@ -11,6 +11,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper to get Edge Function URL
+const SUPABASE_FUNCTIONS_BASE = "https://llvujxdmzuyebkzuutqn.functions.supabase.co";
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<{ mobile: string } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -20,11 +23,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const sendOtp = async (mobile: string) => {
     setLoading(true);
     try {
-      const response = await fetch("/api/send-otp", {
+      const response = await fetch(`${SUPABASE_FUNCTIONS_BASE}/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mobile }),
       });
+      // The edge functions always return JSON
       const res = await response.json();
       setLoading(false);
 
@@ -42,7 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const verifyOtp = async (mobile: string, otp: string) => {
     setLoading(true);
     try {
-      const response = await fetch("/api/verify-otp", {
+      const response = await fetch(`${SUPABASE_FUNCTIONS_BASE}/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mobile, otp }),
