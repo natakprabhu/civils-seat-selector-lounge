@@ -42,14 +42,12 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) =>
       return;
     }
 
-    console.log('Adding notice:', newNotice);
     const { error } = await addNotice(newNotice);
     
     if (error) {
-      console.error('Error adding notice:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to add notice",
+        description: "Failed to add notice",
         variant: "destructive"
       });
     } else {
@@ -64,10 +62,10 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) =>
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-500/20 text-red-300 border-red-400/50';
-      case 'medium': return 'bg-yellow-500/20 text-yellow-300 border-yellow-400/50';
-      case 'low': return 'bg-green-500/20 text-green-300 border-green-400/50';
-      default: return 'bg-slate-500/20 text-slate-300 border-slate-400/50';
+      case 'high': return 'bg-red-100 text-red-800 border-red-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'low': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -77,20 +75,6 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) =>
       case 'maintenance': return <User className="w-4 h-4" />;
       case 'event': return <Calendar className="w-4 h-4" />;
       default: return <Bell className="w-4 h-4" />;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString('en-IN', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      return 'Invalid date';
     }
   };
 
@@ -157,14 +141,14 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) =>
                           {getTypeIcon(notice.type)}
                           <CardTitle className="text-lg text-white">{notice.title}</CardTitle>
                         </div>
-                        <Badge className={`${getPriorityColor(notice.priority)} border`}>
+                        <Badge className={getPriorityColor(notice.priority)}>
                           {notice.priority.toUpperCase()}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-slate-400">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          {formatDate(notice.created_at)}
+                          {new Date(notice.created_at).toLocaleDateString()}
                         </div>
                         <div className="flex items-center gap-1">
                           <User className="w-3 h-3" />
@@ -175,7 +159,7 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) =>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{notice.content}</p>
+                  <p className="text-slate-300 leading-relaxed">{notice.content}</p>
                 </CardContent>
               </Card>
             ))
@@ -191,7 +175,7 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) =>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-slate-300">Title *</label>
+              <label className="text-sm font-medium text-slate-300">Title</label>
               <Input
                 value={newNotice.title}
                 onChange={(e) => setNewNotice({...newNotice, title: e.target.value})}
@@ -201,7 +185,7 @@ const NoticeBoard: React.FC<NoticeBoardProps> = ({ onBack, isStaff = false }) =>
             </div>
             
             <div>
-              <label className="text-sm font-medium text-slate-300">Content *</label>
+              <label className="text-sm font-medium text-slate-300">Content</label>
               <Textarea
                 value={newNotice.content}
                 onChange={(e) => setNewNotice({...newNotice, content: e.target.value})}

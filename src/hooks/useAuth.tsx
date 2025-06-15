@@ -1,99 +1,89 @@
+
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 
 interface AuthContextType {
-  user: { mobile: string; role?: string } | null;
+  user: any | null;
+  session: any | null;
   loading: boolean;
-  sendOtp: (mobile: string) => Promise<{ error: any }>;
-  verifyOtp: (mobile: string, otp: string) => Promise<{ error: any }>;
+  signIn: (mobile: string, userType: 'client' | 'admin' | 'staff') => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  userRole: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper to get Edge Function URL
-const SUPABASE_FUNCTIONS_BASE = "https://llvujxdmzuyebkzuutqn.functions.supabase.co";
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<{ mobile: string; role?: string } | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any | null>(null);
+  const [session, setSession] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  // No user session persistence for demo; you could use localStorage if desired
-
-  const sendOtp = async (mobile: string) => {
-    if (mobile === "9999999999") {
-      setLoading(false);
-      return { error: null };
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch(`${SUPABASE_FUNCTIONS_BASE}/send-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile }),
-      });
-      // The edge functions always return JSON
-      const res = await response.json();
-      setLoading(false);
-
-      if (!response.ok) {
-        // Only log the error, but show generic message to end user
-        console.error("OTP send failed:", res.error || "Unknown error");
-        return { error: "Failed to send OTP. Please try again." };
+  useEffect(() => {
+    // Check for existing session in localStorage
+    const checkSession = () => {
+      try {
+        const sessionData = localStorage.getItem('userSession');
+        if (sessionData) {
+          const parsedSession = JSON.parse(sessionData);
+          const mockUser = {
+            phone: parsedSession.mobile,
+            user_metadata: { mobile: parsedSession.mobile }
+          };
+          setUser(mockUser);
+          setSession(parsedSession);
+          setUserRole(parsedSession.role);
+        }
+      } catch (error) {
+        console.error('Error parsing session:', error);
+        localStorage.removeItem('userSession');
+      } finally {
+        setLoading(false);
       }
+    };
+
+    checkSession();
+  }, []);
+
+  const signIn = async (mobile: string, userType: 'client' | 'admin' | 'staff') => {
+    try {
+      const sessionData = {
+        mobile,
+        role: userType,
+        loginTime: new Date().toISOString()
+      };
+      
+      localStorage.setItem('userSession', JSON.stringify(sessionData));
+      
+      const mockUser = {
+        phone: mobile,
+        user_metadata: { mobile }
+      };
+      
+      setUser(mockUser);
+      setSession(sessionData);
+      setUserRole(userType);
+      
       return { error: null };
     } catch (error) {
-      setLoading(false);
-      // Log actual error, generic to user
-      console.error("OTP send failed:", error);
-      return { error: "Failed to send OTP. Please try again." };
-    }
-  };
-
-  const verifyOtp = async (mobile: string, otp: string) => {
-    // ADMIN BYPASS: allow logging in as admin with 6-digit code 000000
-    if (mobile === "9999999999" && otp === "000000") {
-      setUser({ mobile, role: "admin" });
-      setLoading(false);
-      return { error: null };
-    }
-    setLoading(true);
-    try {
-      const response = await fetch(`${SUPABASE_FUNCTIONS_BASE}/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile, otp }),
-      });
-      const res = await response.json();
-      setLoading(false);
-
-      if (res.success) {
-        setUser({ mobile });
-        return { error: null };
-      } else {
-        // Log actual error; return generic message to user
-        console.error("OTP verification error:", res.error || "Unknown error");
-        return { error: "Verification failed. Please check your details and try again." };
-      }
-    } catch (error) {
-      setLoading(false);
-      // Log actual error; return generic message to user
-      console.error("OTP verification error:", error);
-      return { error: "Verification failed. Please check your details and try again." };
+      return { error };
     }
   };
 
   const signOut = async () => {
+    localStorage.removeItem('userSession');
     setUser(null);
+    setSession(null);
+    setUserRole(null);
   };
 
   return (
     <AuthContext.Provider value={{
       user,
+      session,
       loading,
-      sendOtp,
-      verifyOtp,
-      signOut
+      signIn,
+      signOut,
+      userRole
     }}>
       {children}
     </AuthContext.Provider>

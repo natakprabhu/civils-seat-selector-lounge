@@ -133,7 +133,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
-          email: string | null
+          email: string
           full_name: string
           id: string
           mobile: string
@@ -141,7 +141,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          email?: string | null
+          email: string
           full_name: string
           id: string
           mobile: string
@@ -149,7 +149,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          email?: string | null
+          email?: string
           full_name?: string
           id?: string
           mobile?: string
@@ -170,7 +170,7 @@ export type Database = {
           start_date: string | null
           status: Database["public"]["Enums"]["booking_status"] | null
           total_amount: number
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -184,7 +184,7 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["booking_status"] | null
           total_amount: number
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -198,7 +198,7 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["booking_status"] | null
           total_amount?: number
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
