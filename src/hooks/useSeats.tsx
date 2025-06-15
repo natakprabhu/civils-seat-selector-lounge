@@ -58,25 +58,47 @@ export const useSeats = () => {
     };
   }, []);
 
+  // Helper to get current user id
+  const getUserId = async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) {
+      console.error('No supabase user found', error);
+      return null;
+    }
+    return data.user.id;
+  };
+
   const lockSeat = async (seatId: string) => {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 30); // 30-minute lock
+
+    const userId = await getUserId();
+    if (!userId) {
+      return { error: { message: "User not authenticated." } };
+    }
 
     const { error } = await supabase
       .from('seat_locks')
       .insert({
         seat_id: seatId,
-        expires_at: expiresAt.toISOString()
+        expires_at: expiresAt.toISOString(),
+        user_id: userId
       });
 
     return { error };
   };
 
   const releaseSeatLock = async (seatId: string) => {
+    const userId = await getUserId();
+    if (!userId) {
+      return { error: { message: "User not authenticated." } };
+    }
+
     const { error } = await supabase
       .from('seat_locks')
       .delete()
-      .eq('seat_id', seatId);
+      .eq('seat_id', seatId)
+      .eq('user_id', userId);
 
     return { error };
   };
