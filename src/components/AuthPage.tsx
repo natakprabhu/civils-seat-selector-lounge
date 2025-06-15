@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,17 @@ const AuthPage: React.FC = () => {
   const [otp, setOtp] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const { sendOtp, verifyOtp, loading } = useAuth();
+
+  // Diagnostic: Log on every render
+  console.log('[AuthPage] render', { mobile, showOtpInput, otp });
+
+  useEffect(() => {
+    // Diagnostic: Log on mount
+    console.log('[AuthPage] useEffect - component mounted');
+    return () => {
+      console.log('[AuthPage] component unmounted');
+    };
+  }, []);
 
   const validateMobileNumber = (number: string) => {
     // Remove spaces/special chars
@@ -37,6 +48,8 @@ const AuthPage: React.FC = () => {
     }
 
     setShowOtpInput(true);
+    // Diagnostic: Confirm we hit this and showOtpInput is set
+    console.log('[AuthPage] setShowOtpInput(true) called after OTP send');
     toast({ title: "OTP Sent", description: `OTP sent to ${mobile}` });
   };
 
