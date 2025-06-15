@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -19,29 +20,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check for existing session in localStorage
-    const checkSession = () => {
-      try {
-        const sessionData = localStorage.getItem('userSession');
-        if (sessionData) {
-          const parsedSession = JSON.parse(sessionData);
-          const mockUser = {
-            phone: parsedSession.mobile,
-            user_metadata: { mobile: parsedSession.mobile }
-          };
-          setUser(mockUser);
-          setSession(parsedSession);
-          setUserRole(parsedSession.role);
-        }
-      } catch (error) {
-        console.error('Error parsing session:', error);
-        localStorage.removeItem('userSession');
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Set up Supabase auth state listeners and populate state
+    setLoading(true);
 
-    checkSession();
+    // 1. Listen for auth changes and set session/user accordingly
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        // Try to get userRole from localStorage if present
+        const saved = localStorage.getItem('userSession');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setUserRole(parsed.role || null);
+        }
+      } else {
+        setUserRole(null);
+      }
+      setLoading(false);
+    });
+
+    // 2. On mount, check for session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        const saved = localStorage.getItem('userSession');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setUserRole(parsed.role || null);
+        }
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (mobile: string, userType: 'client' | 'admin' | 'staff') => {
@@ -51,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       let authResponse = await supabase.auth.signInWithPassword({ email, password });
 
+      // Handle sign up if user doesn't exist
       if (authResponse.error && authResponse.error.message === 'Invalid login credentials') {
         authResponse = await supabase.auth.signUp({
           email,
@@ -59,42 +75,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             data: {
               full_name: `User ${mobile}`,
               mobile: mobile,
-            }
+            },
+            emailRedirectTo: `${window.location.origin}/`,
           }
         });
+        // Ask user to check email if necessary
+        if (authResponse.error) throw authResponse.error;
       }
 
-      if (authResponse.error) {
-        throw authResponse.error;
-      }
-      
-      if (!authResponse.data.session) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          throw new Error("Authentication with Supabase failed. Email confirmation may be required.");
-        }
-      }
+      if (authResponse.error) throw authResponse.error;
 
+      // Successful login, update state
+      // { user, session } returned, or may need to fetch with getSession
+      let newSession = authResponse.data.session;
+      if (!newSession) {
+        // Email confirm required, most likely; show error
+        throw new Error("Authentication with Supabase failed. Email confirmation may be required.");
+      }
+      setSession(newSession);
+      setUser(newSession.user);
+
+      // Save mobile/role to localStorage for display/role-picking
       const sessionData = {
         mobile,
         role: userType,
         loginTime: new Date().toISOString()
       };
-      
       localStorage.setItem('userSession', JSON.stringify(sessionData));
-      
-      const mockUser = {
-        phone: mobile,
-        user_metadata: { mobile }
-      };
-      
-      setUser(mockUser);
-      setSession(sessionData);
       setUserRole(userType);
-      
+      setLoading(false);
+
       return { error: null };
     } catch (error) {
-      console.error("Auth error:", error);
+      console.error('Auth error:', error);
+      setLoading(false);
       return { error };
     }
   };
@@ -128,3 +142,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
