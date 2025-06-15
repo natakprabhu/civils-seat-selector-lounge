@@ -1,1 +1,5 @@
+
 project_id = "llvujxdmzuyebkzuutqn"
+
+[functions.twilio-callback]
+verify_jwt = false
