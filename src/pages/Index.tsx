@@ -8,17 +8,9 @@ import ClientDashboard from "@/components/ClientDashboard";
 // import StaffDashboard from "@/components/StaffDashboard";
 
 const Index = () => {
-  const { user, loading, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
-  console.log("INDEX_PAGE_STATE:", { user, loading });
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-white">Loading...</div>
-      </div>
-    );
-  }
+  console.log("INDEX_PAGE_STATE:", { user });
 
   if (!user) {
     return <AuthPage />;
