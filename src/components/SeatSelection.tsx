@@ -1,3 +1,4 @@
+
 import React from 'react';
 import SeatIcon from './SeatIcon';
 import { Seat } from '@/hooks/useSeats';
@@ -75,6 +76,15 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
     return 'vacant';
   }
 
+  // Debug logs for seat statuses
+  React.useEffect(() => {
+    Object.values(seatsByNumber).forEach(seat => {
+      const status = getSeatStatus(seat);
+      // Intentionally log them to spot on_hold seats and status mapping
+      console.log('[SeatStatusDebug] seat', seat.seat_number, 'raw status:', seat.status, '-> computed status:', status);
+    });
+  }, [seats, selectedSeat]);
+
   return (
     <div className="w-full flex justify-center items-stretch mt-2 gap-4 flex-wrap">
       {/* Left block */}
@@ -94,7 +104,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
               }
               const status = getSeatStatus(seat);
               return (
-                <div key={seatNum} className="m-1">
+                <div key={seatNum} className="m-1 flex flex-col items-center">
                   <SeatIcon
                     seatNumber={seat.seat_number}
                     status={status}
@@ -105,6 +115,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
                     }
                     disabled={bookingInProgress || status !== "vacant"}
                   />
+                  <span className="text-xs mt-0.5 text-slate-400">{status}</span>
                 </div>
               );
             })}
@@ -124,7 +135,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
           </div>
         </div>
       </div>
-      {/* Aisle */}
+      {/* Passage (center) */}
       <div className="relative flex flex-col mx-2">
         <div className="flex-1" />
         {/* Center one "Passage" label vertically */}
@@ -161,7 +172,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
               }
               const status = getSeatStatus(seat);
               return (
-                <div key={seatNum} className="m-1">
+                <div key={seatNum} className="m-1 flex flex-col items-center">
                   <SeatIcon
                     seatNumber={seat.seat_number}
                     status={status}
@@ -172,6 +183,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
                     }
                     disabled={bookingInProgress || status !== "vacant"}
                   />
+                  <span className="text-xs mt-0.5 text-slate-400">{status}</span>
                 </div>
               );
             })}
@@ -183,3 +195,4 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
 };
 
 export default SeatSelection;
+
