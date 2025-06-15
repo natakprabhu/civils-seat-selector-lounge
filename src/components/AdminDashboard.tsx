@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { useBookings } from '@/hooks/useBookings';
+import { useSeats } from '@/hooks/useSeats';
 import NoticeBoard from './NoticeBoard';
 import SeatImageUpload from './SeatImageUpload';
 import { 
@@ -26,6 +26,7 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
+  const { seats, loading: seatsLoading } = useSeats();
   const { bookings, loading, approveBooking, rejectBooking } = useBookings();
   const [currentView, setCurrentView] = useState<'dashboard' | 'notices' | 'seat-images'>('dashboard');
 
@@ -72,11 +73,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     }
   };
 
+  // --- SEAT COUNTS LOGIC FROM REAL DATABASE ---
+  const totalSeats = seats.length;
+  const availableSeats = seats.filter(s => s.status === 'vacant').length;
+  const onHoldSeats = seats.filter(s => s.status === 'on_hold').length;
+
   const stats = {
     totalRequests: legitimateBookings.length,
     pendingRequests: legitimateBookings.filter(r => r.status === 'pending').length,
     approvedRequests: legitimateBookings.filter(r => r.status === 'approved').length,
-    rejectedRequests: legitimateBookings.filter(r => r.status === 'cancelled').length
+    rejectedRequests: legitimateBookings.filter(r => r.status === 'cancelled').length,
+    totalSeats,
+    availableSeats,
+    onHoldSeats,
   };
 
   if (currentView === 'notices') {
@@ -87,7 +96,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     return <SeatImageUpload onBack={() => setCurrentView('dashboard')} />;
   }
 
-  if (loading) {
+  if (seatsLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 flex items-center justify-center">
         <div className="text-white">Loading...</div>
@@ -143,20 +152,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Stats Cards */}
-        <div className="grid md:grid-cols-4 gap-6">
+        {/* --- UPDATE: Seats Statistics Cards --- */}
+        <div className="grid md:grid-cols-7 gap-6 mb-6">
           <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-400">Total Requests</p>
-                  <p className="text-2xl font-bold text-white">{stats.totalRequests}</p>
+                  <p className="text-sm font-medium text-slate-400">Total Seats</p>
+                  <p className="text-2xl font-bold text-white">{stats.totalSeats}</p>
                 </div>
                 <Users className="w-8 h-8 text-cyan-400" />
               </div>
             </CardContent>
           </Card>
-          
+          <Card className="stat-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-400">Available</p>
+                  <p className="text-2xl font-bold text-green-400">{stats.availableSeats}</p>
+                </div>
+                <CheckCircle className="w-8 h-8 text-green-400" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="stat-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-400">On Hold</p>
+                  <p className="text-2xl font-bold text-yellow-400">{stats.onHoldSeats}</p>
+                </div>
+                <Clock className="w-8 h-8 text-yellow-400" />
+              </div>
+            </CardContent>
+          </Card>
+          {/* Old Booking Stats */}
+          <Card className="stat-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-400">Booking Requests</p>
+                  <p className="text-2xl font-bold text-white">{stats.totalRequests}</p>
+                </div>
+                <Users className="w-8 h-8 text-slate-400" />
+              </div>
+            </CardContent>
+          </Card>
           <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -168,7 +210,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               </div>
             </CardContent>
           </Card>
-          
           <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -180,7 +221,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               </div>
             </CardContent>
           </Card>
-          
           <Card className="stat-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
