@@ -144,7 +144,19 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({
     if (bookingStatus === "approved") {
       return 'booked';
     }
-    return "vacant";
+    
+    // If no booking is found, rely on the seat's own status property
+    switch (seat.status) {
+      case 'on_hold':
+        return 'pending';
+      case 'booked':
+      case 'maintenance':
+        return 'booked';
+      case 'vacant':
+        return 'vacant';
+      default:
+        return 'vacant';
+    }
   }
 
   // Find vacant seat obj for the currently selected seat
