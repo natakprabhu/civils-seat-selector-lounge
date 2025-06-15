@@ -96,10 +96,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const userId = user?.id;
   const userEmail = user?.email || userMobile;
 
-  // NEW: Show list and selected show
-  const [shows, setShows] = React.useState<any[]>([]);
-  const [showsLoading, setShowsLoading] = React.useState(true);
-
   React.useEffect(() => {
     // Fetch user profile from Supabase when the user is present
     const fetchProfile = async () => {
@@ -150,28 +146,16 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     };
     fetchBookings();
 
-    // Fetch available shows (fix types)
-    const fetchShows = async () => {
-      setShowsLoading(true);
-      // Use 'any' for type safety due to Supabase codegen mismatch
-      const { data, error } = await supabase
-        .from("shows" as any)
-        .select("id, name");
-      setShowsLoading(false);
-      if (data && Array.isArray(data) && data.length > 0) {
-        setShows(data);
-      } else {
-        setShows([]);
-      }
-    };
-    fetchShows();
+    // Show logic removed
+    // No fetchShows
   }, [user]);
 
-  // Only allow booking if user has no active (pending/approved) booking AND at least one available show
+  // Update: Remove shows check from booking restriction
   const userActiveBooking = bookings.some(
     (b) => (b.user_id === userId) && (b.status === "pending" || b.status === "approved")
   );
-  const canBook = shows.length > 0 && !userActiveBooking;
+  // Remove shows length check
+  const canBook = !userActiveBooking;
 
   const handleSeatSelect = (seat: string) => {
     setSelectedSeat(seat);
@@ -183,6 +167,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     setSelectedSeat(null);
   };
 
+  // Remove shows from booking payload logic
   const handleBookingSubmit = async (details: { name: string; email: string; mobile: string; seatNumber: string; duration: number }) => {
     setFormLoading(true);
     const seat = seats.find(s => s.seat_number === details.seatNumber);
@@ -195,25 +180,13 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       });
       return;
     }
-    // If no show, abort
-    if (shows.length === 0) {
-      setFormLoading(false);
-      toast({
-        title: 'No Show Found',
-        description: 'Cannot book a seat: No available shows in the system.',
-        variant: 'destructive'
-      });
-      return;
-    }
-    // Use first available show as default
-    const selectedShowId = shows[0].id;
-
+    // No show check or payload
     console.log("[Booking Submit] user object:", user);
     console.log("[Booking Submit] user.id:", user.id);
     console.log("[Booking Submit] Booking payload:", {
       user_id: user.id,
       seat_id: seat.id,
-      show_id: selectedShowId,
+      // show_id: removed
       duration_months: details.duration,
       status: "pending"
     });
@@ -221,7 +194,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     const { error } = await supabase.from("seat_bookings").insert({
       user_id: user.id,
       seat_id: seat.id,
-      show_id: selectedShowId,
       duration_months: details.duration,
       status: "pending"
     });
@@ -234,7 +206,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         .in("status", ["pending", "approved"]);
 
       if (newBookings) {
-        // again, filter and cast status as needed
         const filtered = newBookings.filter(
           (b: any) => b.status === "pending" || b.status === "approved"
         ).map(
