@@ -457,15 +457,16 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const handleConfirmCancelBooking = async () => {
     if (!transactionToCancel) return;
     try {
-      // Delete booking by id from the seat_bookings table
+      // Update booking by id only: set status to 'cancelled'
       const { error } = await supabase
         .from('seat_bookings')
-        .delete()
+        .update({ status: 'cancelled' })
         .eq('id', transactionToCancel);
 
       if (error) throw error;
-      // Optionally: remove from UI state immediately
-      setUserTransactions(prev => prev.filter(txn => txn.id !== transactionToCancel));
+      setUserTransactions(prev =>
+        prev.filter(txn => txn.id !== transactionToCancel)
+      );
       toast({
         title: "Booking Cancelled",
         description: "Your booking request has been cancelled.",
@@ -480,7 +481,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
     } finally {
       setShowCancelDialog(false);
       setTransactionToCancel(null);
-      // Optionally: refetchBookings();
+      // Optionally refetchBookings();
     }
   };
 
@@ -595,6 +596,20 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       </div>
     );
   }
+
+  // New: Helper function to decide if booking is still allowed (< 30min)
+  function isTransactionWithinThirtyMinutes(requestedAt: string) {
+    if (!requestedAt) return false;
+    const requestedMs = new Date(requestedAt).getTime();
+    const nowMs = Date.now();
+    return nowMs - requestedMs <= 30 * 60 * 1000; // 30 min in ms
+  }
+
+  const filteredUserTransactions = userTransactions.filter(
+    txn =>
+      (!txn.requestedAt || isTransactionWithinThirtyMinutes(txn.requestedAt)) ||
+      txn.status !== "pending"
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900">
@@ -862,14 +877,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            {userTransactions.length === 0 ? (
+            {filteredUserTransactions.length === 0 ? (
               <div className="text-center py-8">
                 <Receipt className="w-12 h-12 text-slate-400 mx-auto mb-4" />
                 <p className="text-slate-400">No booking or seat change details yet. Book a seat to get started!</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-800">
-                {userTransactions.map((txn, idx) => {
+                {filteredUserTransactions.map((txn, idx) => {
                   const showTimer = txn.status === "pending" && txn.requestedAt;
 
                   return (
