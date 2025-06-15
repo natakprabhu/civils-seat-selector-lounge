@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -55,7 +54,6 @@ export const useBookings = () => {
       if (!user) {
         throw new Error("User not authenticated. Please log in to book a seat.");
       }
-
       // Only allow 1 pending/approved seat booking per user
       const { data: existingBooking } = await supabase
         .from('seat_bookings')
@@ -66,16 +64,22 @@ export const useBookings = () => {
       if (existingBooking) {
         throw new Error('You already have an active booking request. Please wait for approval or cancel your existing request.');
       }
-
+      // NOTE: You must provide show_id
+      const { data: shows } = await supabase.from('shows').select('id').limit(1);
+      const show_id = shows && shows[0]?.id;
+      if (!show_id) {
+        throw new Error("Cannot create booking: missing show_id. Please add or define a show.");
+      }
       const { error } = await supabase
         .from('seat_bookings')
-        .insert({
+        .insert([{
           user_id: user.id,
           seat_id: seatId,
           duration_months: durationMonths,
           total_amount: totalAmount,
           status: 'pending',
-        });
+          show_id: show_id
+        }]);
 
       if (error) throw new Error(error.message || "Unknown Supabase insert error");
       await fetchBookings();

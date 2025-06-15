@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface Seat {
   id: string;
   seat_number: string;
   section: string;
   row_number: string;
-  status: 'vacant' | 'booked' | 'maintenance' | 'on_hold';
-  monthly_rate: number;
+  status: 'vacant' | 'booked' | 'pending';
 }
+
+const SEAT_AVAILABILITY_API = `https://llvujxdmzuyebkzuutqn.functions.supabase.co/seat_availability`;
 
 export const useSeats = () => {
   const [seats, setSeats] = useState<Seat[]>([]);
@@ -16,18 +16,9 @@ export const useSeats = () => {
 
   const fetchSeats = async () => {
     try {
-      const { data, error } = await supabase
-        .from('seats')
-        .select('*')
-        .order('seat_number');
-
-      if (error) throw error;
-      // As the seats table does not contain a 'status' column, add default status 'vacant'
-      const seatsWithStatus: Seat[] = (data || []).map((seat: any) => ({
-        ...seat,
-        status: (seat.status as Seat["status"]) || 'vacant', // fallback
-      }));
-
+      const resp = await fetch(SEAT_AVAILABILITY_API);
+      const map = await resp.json();
+      const seatsWithStatus: Seat[] = Object.values(map);
       setSeats(seatsWithStatus);
     } catch (error) {
       console.error('Error fetching seats:', error);
@@ -38,7 +29,7 @@ export const useSeats = () => {
 
   useEffect(() => {
     fetchSeats();
-
+    // Optionally, subscribe for live updates using Supabase if needed.
     const channel = supabase
       .channel('seats-changes')
       .on(
@@ -58,9 +49,6 @@ export const useSeats = () => {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  // lockSeat and releaseSeatLock moved out (as seat_locks table does not exist in supabase types)
-  // You may re-add lock logic in the future after creating the necessary table and fields.
 
   return {
     seats,

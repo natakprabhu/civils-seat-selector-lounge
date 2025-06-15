@@ -323,7 +323,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   useEffect(() => {
     if (myBooking) {
       setUserBooking({
-        seatNumber: myBooking.seat?.seat_number || "",
+        seatNumber: "", // Remove: myBooking.seat?.seat_number
         name: profile?.full_name || "User Name",
         mobile: profile?.mobile || userMobile,
         email: profile?.email || "",
@@ -332,7 +332,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         submittedAt: myBooking.requested_at
           ? new Date(myBooking.requested_at).toLocaleString()
           : "",
-        paymentStatus: 'pending', // Fix: Always include this property
+        paymentStatus: 'pending',
         paidAmount: 0,
         validTill: "",
         remainingDays: 0,
@@ -352,7 +352,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
         duration: "",
         status: "not_applied",
         submittedAt: "",
-        paymentStatus: 'pending', // Fix: Always include this property
+        paymentStatus: 'pending',
         paidAmount: 0,
         validTill: "",
         remainingDays: 0,
