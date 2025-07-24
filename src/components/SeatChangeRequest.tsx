@@ -24,6 +24,7 @@ const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
 
   // dummy values for bookings etc so SeatSelection renders with correct props
   const bookings = [];
+  const seatHolds = [];
   const userActiveBooking = false;
 
   useEffect(() => {
@@ -107,6 +108,7 @@ const SeatChangeRequest: React.FC<SeatChangeRequestProps> = ({
               <SeatSelection
                 seats={seats}
                 bookings={bookings}
+                seatHolds={seatHolds}
                 userActiveBooking={userActiveBooking}
                 onSeatSelect={handleSeatSelect}
                 selectedSeat={selectedSeat}

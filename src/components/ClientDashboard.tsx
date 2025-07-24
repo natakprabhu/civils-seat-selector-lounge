@@ -78,7 +78,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
   const [hasPendingSeatChange] = useState(false);
 
   const [bookings, setBookings] = React.useState<{ seat_id: string, status: "pending" | "approved" | "cancelled", user_id: string, subscription_end_date?: string }[]>([]);
-  const [seatHolds, setSeatHolds] = React.useState<{ seat_id: string, lock_expiry: string, user_id: string }[]>([]);
+  const [seatHolds, setSeatHolds] = React.useState<{ seat_id: string, expires_at: string, user_id: string }[]>([]);
   const [bookingsLoading, setBookingsLoading] = React.useState(true);
   const [selectedSeat, setSelectedSeat] = React.useState<string | null>(null);
   const [showDialog, setShowDialog] = React.useState(false);
@@ -126,8 +126,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       // Fetch active seat holds
       const { data: holdsData, error: holdsError } = await supabase
         .from("seat_holds")
-        .select("seat_id, lock_expiry, user_id")
-        .gt("lock_expiry", new Date().toISOString());
+        .select("seat_id, expires_at, user_id")
+        .gt("expires_at", new Date().toISOString());
       
       setBookingsLoading(false);
       
@@ -236,7 +236,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
       const { error: holdError } = await supabase.from("seat_holds").insert({
         user_id: user.id,
         seat_id: seat.id,
-        lock_expiry: lockExpiry.toISOString()
+        show_id: 'default',
+        expires_at: lockExpiry.toISOString()
       });
 
       if (holdError) {
@@ -254,8 +255,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
 
       const { data: newHolds } = await supabase
         .from("seat_holds")
-        .select("seat_id, lock_expiry, user_id")
-        .gt("lock_expiry", new Date().toISOString());
+        .select("seat_id, expires_at, user_id")
+        .gt("expires_at", new Date().toISOString());
 
       if (newBookings) {
         const filtered = newBookings.filter(
@@ -681,7 +682,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ userMobile, onLogout 
             <SeatSelection
               seats={seats}
               bookings={bookings}
-              seatHolds={seatHolds}
+        seatHolds={seatHolds.map(hold => ({
+          seat_id: hold.seat_id,
+          lock_expiry: hold.expires_at,
+          user_id: hold.user_id
+        }))}
               userActiveBooking={userActiveBooking}
               selectedSeat={selectedSeat}
               onSeatSelect={handleSeatSelect}
